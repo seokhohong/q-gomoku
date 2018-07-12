@@ -64,7 +64,7 @@ def epsilon_function(i):
     return 0.03
 
 if __name__ == "__main__":
-    mind = deep_conv_mind.DeepConvMind(size=SIZE, alpha=1)
+    mind = deep_conv_mind.DeepConvMind(size=SIZE, alpha=0.1)
     #mind.load('conv_mind_50.pkl')
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
@@ -74,7 +74,7 @@ if __name__ == "__main__":
         current_player = round_board.player_to_move
         print('Game', i)
         if i % 10000 == 0 and i > 0:
-            copy_mind = deep_conv_mind.DeepConvMind(size=SIZE, alpha=1)
+            copy_mind = deep_conv_mind.DeepConvMind(size=SIZE, alpha=0.1)
             copy_mind.est = keras.models.clone_model(mind.est)
             minds.append(copy_mind)
             if len(minds) > 1:
@@ -83,15 +83,15 @@ if __name__ == "__main__":
         #if i == 10:
         #    versus(c_mind, mind)
         if i % 50 == 0 and i > 0:
-            mind.save('deep_shape1.pkl')
+            mind.save('no_turn.pkl')
         while True:
             result = mind.make_move(round_board,
                                     as_player=current_player,
                                     retrain=True,
                                     epsilon=0.1,
-                                    max_depth=2,
+                                    max_depth=8,
                                     k=25,
-                                    max_iters=10
+                                    max_iters=50
                                     )
             print(round_board.pprint())
             current_player = -current_player

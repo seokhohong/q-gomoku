@@ -202,66 +202,89 @@ class TestBoard(unittest.TestCase):
     #     self.assertEqual(possible_moves[0][0], best_move)
     #     self.assertAlmostEqual(possible_moves[0][1].q, best_q, places=5)
 
-    def test_train_vectors(self):
+    # def test_train_vectors(self):
+    #
+    #     mind = DeepConvMind(size=5, alpha=0.5)
+    #     mind.load('conv_mind_50.pkl')
+    #     mind.make_move(Board(size=5, win_chain_length=4), 1, max_depth=2, epsilon=0)
+    #
+    #     conv = ConvMind(size=5, alpha=0.5)
+    #     conv.load('conv_mind_50.pkl')
+    #     conv.make_move(Board(size=5, win_chain_length=4), 1, epsilon=0)
+    #
+    #     self.assertEqual(len(mind.train_vectors), len(conv.train_vectors))
+    #     for i in range(len(mind.train_vectors)):
+    #         self.assertTrue(np.array_equal(mind.train_vectors[i][0].reshape(-1), conv.train_vectors[i][0].reshape(-1)))
+    #
+    #     for elem1, elem2 in zip(mind.train_labels, conv.train_labels):
+    #         self.assertAlmostEqual(elem1, elem2)
+    #
+    #     mind.update_model()
+    #     conv.update_model()
+    #
+    #     for weights1, weights2 in zip(mind.est.get_weights(), conv.est.get_weights()):
+    #         for elem1, elem2 in zip(weights1, weights2):
+    #             if type(elem1) != np.double:
+    #                 if np.mean(elem1 - elem2) > 1E-6 or np.mean(elem1 - elem2) < -1E-6:
+    #                     print(elem1, elem2)
+    #                 self.assertAlmostEqual(np.mean(elem1 - elem2), 0, places=3)
+    #             else:
+    #                 self.assertAlmostEqual(elem1, elem2, places=3)
+    #
+    #     # reset brains
+    #     mind.load('conv_mind_50.pkl')
+    #     conv.load('conv_mind_50.pkl')
+    #
+    #     board = Board(size=5, win_chain_length=4)
+    #     board.make_move(2, 2)
+    #     mind.make_move(board, -1, max_depth=2, epsilon=0)
+    #
+    #     board = Board(size=5, win_chain_length=4)
+    #     board.make_move(2, 2)
+    #     conv.make_move(board, -1)
+    #
+    #     self.assertEqual(len(mind.train_vectors), len(conv.train_vectors))
+    #     for i in range(len(mind.train_vectors)):
+    #         self.assertTrue(np.array_equal(mind.train_vectors[i][0].reshape(-1), conv.train_vectors[i][0].reshape(-1)))
+    #
+    #     for elem1, elem2 in zip(mind.train_labels, conv.train_labels):
+    #         self.assertAlmostEqual(elem1, elem2)
+    #
+    #     mind.update_model()
+    #     conv.update_model()
+    #
+    #     for weights1, weights2 in zip(mind.est.get_weights(), conv.est.get_weights()):
+    #         for elem1, elem2 in zip(weights1, weights2):
+    #             if type(elem1) != np.double:
+    #                 if np.mean(elem1 - elem2) > 1E-6 or np.mean(elem1 - elem2) < -1E-6:
+    #                     print(elem1, elem2)
+    #                 self.assertAlmostEqual(np.mean(elem1 - elem2), 0, places=2)
+    #             else:
+    #                 self.assertAlmostEqual(elem1, elem2, places=3)
+
+    def test_converged(self):
 
         mind = DeepConvMind(size=5, alpha=0.5)
-        mind.load('conv_mind_50.pkl')
-        mind.make_move(Board(size=5, win_chain_length=4), 1, max_depth=2, epsilon=0)
-
-        conv = ConvMind(size=5, alpha=0.5)
-        conv.load('conv_mind_50.pkl')
-        conv.make_move(Board(size=5, win_chain_length=4), 1, epsilon=0)
-
-        self.assertEqual(len(mind.train_vectors), len(conv.train_vectors))
-        for i in range(len(mind.train_vectors)):
-            self.assertTrue(np.array_equal(mind.train_vectors[i][0].reshape(-1), conv.train_vectors[i][0].reshape(-1)))
-
-        for elem1, elem2 in zip(mind.train_labels, conv.train_labels):
-            self.assertAlmostEqual(elem1, elem2)
-
-        mind.update_model()
-        conv.update_model()
-
-        for weights1, weights2 in zip(mind.est.get_weights(), conv.est.get_weights()):
-            for elem1, elem2 in zip(weights1, weights2):
-                if type(elem1) != np.double:
-                    if np.mean(elem1 - elem2) > 1E-6 or np.mean(elem1 - elem2) < -1E-6:
-                        print(elem1, elem2)
-                    self.assertAlmostEqual(np.mean(elem1 - elem2), 0, places=3)
-                else:
-                    self.assertAlmostEqual(elem1, elem2, places=3)
-
-        # reset brains
-        mind.load('conv_mind_50.pkl')
-        conv.load('conv_mind_50.pkl')
+        mind.load('deep_conv_2500.pkl')
 
         board = Board(size=5, win_chain_length=4)
+
+
         board.make_move(2, 2)
-        mind.make_move(board, -1, max_depth=2, epsilon=0)
+        board.make_move(3, 3)
+        board.make_move(1, 1)
+        board.make_move(1, 3)
+        board.make_move(2, 3)
+        print(board.pprint())
+        #mind.make_move(board, -1, max_depth=7, epsilon=0)
 
-        board = Board(size=5, win_chain_length=4)
-        board.make_move(2, 2)
-        conv.make_move(board, -1)
+        print(mind.q(board, -1))
+        print(mind.q(board, 1))
 
-        self.assertEqual(len(mind.train_vectors), len(conv.train_vectors))
-        for i in range(len(mind.train_vectors)):
-            self.assertTrue(np.array_equal(mind.train_vectors[i][0].reshape(-1), conv.train_vectors[i][0].reshape(-1)))
+        board.make_move(1, 2)
 
-        for elem1, elem2 in zip(mind.train_labels, conv.train_labels):
-            self.assertAlmostEqual(elem1, elem2)
-
-        mind.update_model()
-        conv.update_model()
-
-        for weights1, weights2 in zip(mind.est.get_weights(), conv.est.get_weights()):
-            for elem1, elem2 in zip(weights1, weights2):
-                if type(elem1) != np.double:
-                    if np.mean(elem1 - elem2) > 1E-6 or np.mean(elem1 - elem2) < -1E-6:
-                        print(elem1, elem2)
-                    self.assertAlmostEqual(np.mean(elem1 - elem2), 0, places=2)
-                else:
-                    self.assertAlmostEqual(elem1, elem2, places=3)
-
+        print(mind.q(board, 1))
+        print(mind.q(board, -1))
 
 if __name__ == '__main__':
     unittest.main()

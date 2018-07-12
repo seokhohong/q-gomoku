@@ -16,7 +16,7 @@ MIN_Q = -1
 MAX_Q = 1
 
 class DeepConvMind:
-    def __init__(self, size, alpha):
+    def __init__(self, size, alpha, turn_input=True):
 
         assert(size == 5)
         self.size = size
@@ -38,6 +38,8 @@ class DeepConvMind:
 
         self.fitted = False
 
+        self.turn_input = turn_input
+
         self.alpha = alpha
 
     def get_model(self):
@@ -54,18 +56,22 @@ class DeepConvMind:
         epochs = 10
 
         inp = Input(shape=(height, width, 1))
-        conv_1 = Convolution2D(conv_depth, (3, 3), padding='same', activation='relu',
+        # key difference between this and conv network is padding
+        conv_1 = Convolution2D(conv_depth, (3, 3), padding='valid', activation='relu',
                                kernel_initializer='random_uniform')(inp)
+        conv_2 = Convolution2D(conv_depth, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_uniform')(conv_1)
         # pool_1 = MaxPooling2D(pool_size=(pool_size, pool_size))(conv_1)
-        drop_1 = Dropout(drop_prob_1)(conv_1)
+        drop_1 = Dropout(drop_prob_1)(conv_2)
         # Now flatten to 1D, apply FC -> ReLU
         flat = Flatten()(drop_1)
         turn_input = Input(shape=(1,), name='turn')
-        full = concatenate([flat, turn_input])
+        #full = concatenate([flat, turn_input])
 
-        hidden = Dense(hidden_size, activation='relu', kernel_initializer='random_uniform')(full)
-        drop_3 = Dropout(drop_prob_2)(hidden)
-        out = Dense(1)(drop_3)
+        hidden = Dense(hidden_size, activation='relu', kernel_initializer='random_uniform')(flat)
+        drop_2 = Dropout(drop_prob_2)(hidden)
+
+        out = Dense(1)(drop_2)
 
         model = Model(inputs=[inp, turn_input], outputs=out)
         model.compile(loss=losses.mean_absolute_error, optimizer='adam', metrics=['mean_absolute_error'])
@@ -208,12 +214,21 @@ class DeepConvMind:
 
         # this helps parallelize
         # multiplication is needed to flip the Q (adjust perspective)
-        predictions = np.clip(
-                np.array(q_search_player) * self.est.predict([board_vectors, np.array(q_search_player)],
-                                                    batch_size=32).reshape(len(q_search_nodes)),
-                a_max=minimax.TreeNode.MAX_Q,
-                a_min=minimax.TreeNode.MIN_Q
-        )
+        if self.turn_input:
+            predictions = np.clip(
+                    np.array(q_search_player) * self.est.predict([board_vectors, np.array(q_search_player)],
+                                                        batch_size=32).reshape(len(q_search_nodes)),
+                    a_max=minimax.TreeNode.MAX_Q - 0.01,
+                    a_min=minimax.TreeNode.MIN_Q + 0.01
+            )
+
+        else:
+            predictions = np.clip(
+                    np.array(q_search_player) * self.est.predict([board_vectors],
+                                                        batch_size=32).reshape(len(q_search_nodes)),
+                    a_max=minimax.TreeNode.MAX_Q - 0.01,
+                    a_min=minimax.TreeNode.MIN_Q + 0.01
+            )
 
         for i, leaf in enumerate(q_search_nodes):
             # update with newly computed q's (only an assignment since approx, we'll compute minimax q's later)
@@ -226,7 +241,11 @@ class DeepConvMind:
         return True
 
     def q(self, board, as_player):
-        prediction = self.est.predict([[board.get_matrix(as_player).reshape(board.size, board.size, -1)], np.array([as_player])])[0][0]
+        if self.turn_input:
+            prediction = self.est.predict([[board.get_matrix(as_player).reshape(board.size, board.size, -1)], np.array([as_player])])[0][0]
+        else:
+            prediction = self.est.predict(
+                [[board.get_matrix(as_player).reshape(board.size, board.size, -1)]])[0][0]
         return prediction
 
     # with epsilon probability will select random move
