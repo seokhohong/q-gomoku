@@ -2,8 +2,6 @@ import numpy as np
 
 from core.board import GameState
 
-MIN_Q = -1
-MAX_Q = 1
 
 class MoveList:
     # moves should be a tuple
@@ -26,6 +24,8 @@ class MoveList:
 
 
 class TreeNode:
+    MIN_Q = -1
+    MAX_Q = 1
     # is maximizing?
     def __init__(self, parent, is_maximizing, full_move_list):
         # this node's q
@@ -112,23 +112,14 @@ class BFNode(TreeNode):
             self.parent.local_q_table[self] = self.q
             self.parent.recalculate_q()
 
-class PrincipleVariation:
-    def __init__(self, node, q):
-        self.node = node
-        self.q = q
-
-    def __str__(self):
-        return str(self.node)
-
-    def flip_q(self):
-        return PrincipleVariation(self.node, -self.q)
-
 # principle value search
 class PVSNode(TreeNode):
+
     def __init__(self, *args, **kwargs):
         super(PVSNode, self).__init__(*args, **kwargs)
         # tuple of PVSNode, q
         self.principle_variation = None
+        self.q = None
 
     def find_pvs(self):
         # found child
@@ -154,19 +145,19 @@ class PVSNode(TreeNode):
 
     def get_sorted_moves(self):
         # TODO: play shorter sequences if advantageous, otherwise play longer sequences
-        key = lambda x: x[1].principle_variation.q - len(x[1].principle_variation.node.full_move_list) * 0.001
-        return sorted(self.children.items(), key=key, reverse=True)
+        key = lambda x: x[1].q - len(x[1].full_move_list) * 0.001
+        return sorted(self.children.items(), key=key, reverse=self.is_maximizing)
 
     def get_k_principle_variations(self, k=5, max_depth=5):
         if k > len(self.children):
             k = len(self.children)
-        sorted_children = sorted(list(self.children.values()), key=lambda x: x.principle_variation.q, reverse=True)
+        sorted_children = sorted(list(self.children.values()), key=lambda x: x.get_q_importance(), reverse=self.is_maximizing)
 
         valid_expansions = []
         for child in sorted_children:
-            if child.principle_variation.node.game_status == GameState.NOT_OVER and \
-                    len(child.principle_variation.node.full_move_list.moves) < max_depth:
-                valid_expansions.append(child.principle_variation.node)
+            if child.principle_variation.game_status == GameState.NOT_OVER and \
+                    len(child.principle_variation.full_move_list.moves) < max_depth:
+                valid_expansions.append(child.principle_variation)
                 if len(valid_expansions) >= k:
                     break
 
@@ -181,7 +172,8 @@ class PVSNode(TreeNode):
         self.game_status = game_status
 
         # for a leaf node, the principle variation is itself
-        self.principle_variation = PrincipleVariation(self, q)
+        self.principle_variation = self
+        self.q = q
 
     def recalculate_q(self):
         # take the largest (or smallest) q across all seen moves
@@ -191,18 +183,22 @@ class PVSNode(TreeNode):
             return
 
         if self.principle_variation:
-            prev_q = self.principle_variation.q
+            prev_q = self.q
         else:
             prev_q = np.inf
 
-        best_move = max(self.children.items(), key=lambda x: x[1].principle_variation.q)[0]
+        if self.is_maximizing:
+            best_move = max(self.children.items(), key=lambda x: x[1].q)[0]
+        else:
+            best_move = min(self.children.items(), key=lambda x: x[1].q)[0]
 
         # using negamax framework
-        self.principle_variation = self.children[best_move].principle_variation.flip_q()
+        self.principle_variation = self.children[best_move].principle_variation
+        self.q = self.children[best_move].q
 
-        if self.parent and abs(prev_q - self.principle_variation.q) > 1E-6:
+        if self.parent and abs(prev_q - self.q) > 1E-6:
             # update pvs for parent
             self.parent.recalculate_q()
 
     def __str__(self):
-        return "PV: " + str(self.principle_variation.node.full_move_list.moves) + " Q: " + str(self.principle_variation.q) + " Max Depth: " + str(self.max_depth)
+        return "PV: " + str(self.principle_variation.full_move_list.moves) + " Q: " + str(self.q) + " Max Depth: " + str(self.max_depth)

@@ -63,7 +63,7 @@ class DeepConvMind:
         turn_input = Input(shape=(1,), name='turn')
         full = concatenate([flat, turn_input])
 
-        hidden = Dense(hidden_size, activation='relu', kernel_initializer='random_uniform')(flat)
+        hidden = Dense(hidden_size, activation='relu', kernel_initializer='random_uniform')(full)
         drop_3 = Dropout(drop_prob_2)(hidden)
         out = Dense(1)(drop_3)
 
@@ -75,9 +75,9 @@ class DeepConvMind:
     # board perception AND move turn perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
 
-    def pvs_best_moves(self, board, as_player, max_iters=10, epsilon=0.01, verbose=True, k=25, max_depth=5):
+    def pvs_best_moves(self, board, max_iters=10, epsilon=0.01, verbose=True, k=25, max_depth=5):
         root_node = minimax.PVSNode(parent=None,
-                                    is_maximizing=True if as_player == 1 else False,
+                                    is_maximizing=True if board.player_to_move == 1 else False,
                                     full_move_list=minimax.MoveList(moves=()))
 
         principle_variations = [root_node]
@@ -91,7 +91,7 @@ class DeepConvMind:
                 break
 
             # game winning path
-            if abs(principle_variations[0].principle_variation.q - as_player) < 1E-6:
+            if abs(principle_variations[0].principle_variation.q - board.player_to_move) < 1E-6:
                 if verbose:
                     # if early termination for a deep node, generally means the nnet has a lot to learn
                     print("Early Search termination: Found Win")
@@ -106,10 +106,15 @@ class DeepConvMind:
 
         return possible_moves
 
-    def pvs(self, board, as_player, max_iters=50, epsilon=0.01, verbose=True, max_depth=5):
+    def pvs(self, board, max_iters=10, epsilon=0.01, verbose=True, max_depth=5, k=25):
 
         # array of [best_move, best_node]
-        possible_moves = self.pvs_best_moves(board, as_player, max_iters, epsilon, verbose, max_depth=max_depth)
+        possible_moves = self.pvs_best_moves(board,
+                                             max_iters=max_iters,
+                                             epsilon=epsilon,
+                                             verbose=verbose,
+                                             k=k,
+                                             max_depth=max_depth)
 
         # best action is 0th index
         picked_action = 0
@@ -119,8 +124,8 @@ class DeepConvMind:
             if verbose:
                 print('suboptimal move')
             # abs is only there to handle floating point problems
-            qs = np.array([node.principle_variation.q for _, node in possible_moves])
-            if as_player == 1:
+            qs = np.array([node.q for _, node in possible_moves])
+            if board.player_to_move == 1:
                 distribution = np.abs(qs + 1.0) / 2
             else:
                 # not sure this is correct
@@ -132,10 +137,12 @@ class DeepConvMind:
 
         best_move, best_node = possible_moves[picked_action]
 
-        return best_move, best_node.principle_variation.q
+        # this player flip is super awkward...
+        return best_move, best_node.q * board.player_to_move
 
     def negamax_feature_vector(self, board):
-        return board.get_matrix(as_player=-board.player_to_move), board.player_to_move
+        # essentially looking at "what is the value of my move (I've already made the move so I back up)"
+        return board.get_matrix(as_player=-board.player_to_move), -board.player_to_move
 
     # q_memory is a dict[(move1, move2, move3, ...)] = (q, game over, True/false)
     # q_memory / board should be treated as references
@@ -172,8 +179,8 @@ class DeepConvMind:
                     #print('Game Won', child.full_move_list.moves, -board.player_to_move)
                     if len(child.full_move_list.moves) == 1:
                         print('win now')
-                    child.assign_q(1, core.board.GameState.WON)
-                    #child.assign_q(-board.player_to_move, core.board.GameState.WON)
+                    #child.assign_q(-1, core.board.GameState.WON)
+                    child.assign_q(-board.player_to_move, core.board.GameState.WON)
 
                 elif board.game_drawn():
                     child.assign_q(0, core.board.GameState.DRAW)
@@ -200,8 +207,13 @@ class DeepConvMind:
         board_vectors = np.array(q_search_vectors).reshape(len(q_search_nodes), self.size, self.size, 1)
 
         # this helps parallelize
-        predictions = self.est.predict([board_vectors, np.array(q_search_player)],
-                                       batch_size=32).reshape(len(q_search_nodes))
+        # multiplication is needed to flip the Q (adjust perspective)
+        predictions = np.clip(
+                np.array(q_search_player) * self.est.predict([board_vectors, np.array(q_search_player)],
+                                                    batch_size=32).reshape(len(q_search_nodes)),
+                a_max=minimax.TreeNode.MAX_Q,
+                a_min=minimax.TreeNode.MIN_Q
+        )
 
         for i, leaf in enumerate(q_search_nodes):
             # update with newly computed q's (only an assignment since approx, we'll compute minimax q's later)
@@ -219,11 +231,16 @@ class DeepConvMind:
 
     # with epsilon probability will select random move
     # returns whether game has concluded or not
-    def make_move(self, board, as_player, retrain=True, verbose=True, epsilon=0.1, max_depth=5):
+    def make_move(self, board, as_player, retrain=True, verbose=True, epsilon=0.1, max_depth=5, max_iters=10, k=25):
         current_q = self.q(board, as_player)
         assert(as_player == board.player_to_move)
 
-        move, best_q = self.pvs(board, as_player, epsilon=epsilon, verbose=verbose, max_depth=max_depth)
+        move, best_q = self.pvs(board,
+                                epsilon=epsilon,
+                                verbose=verbose,
+                                max_depth=max_depth,
+                                max_iters=max_iters,
+                                k=k)
 
         new_q = (1 - self.alpha) * current_q + self.alpha * best_q
         print(current_q, best_q)
@@ -269,7 +286,6 @@ class DeepConvMind:
             self.est.fit(x=train_inputs,
                          y=self.train_labels,
                          validation_split=0.1,
-                         shuffle=True,
                          sample_weight=np.abs(np.array(self.train_labels)) + weight_shift)
 
         max_vectors = 10000
@@ -284,5 +300,4 @@ class DeepConvMind:
         self.est.save(file)
 
     def load(self, file):
-        with open(file, 'rb') as f:
-            self.est = keras.models.load_model(file)
+        self.est = keras.models.load_model(file)

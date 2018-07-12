@@ -72,7 +72,7 @@ class ConvMind:
 
         # check each move
         assert(len(board.available_moves) <= board.size ** 2)
-        next_actions, next_qs = self.minimax_q(board, as_player)
+        next_actions, next_qs = self.minimax_q(board)
 
         best_q = np.max(next_qs)
         options = []
@@ -139,9 +139,7 @@ class ConvMind:
         if len(self.train_vectors) > 0:
             self.est.fit(x=train_inputs,
                          y=self.train_labels,
-                         callbacks=self.callbacks_list,
                          validation_split=0.1,
-                         shuffle=True,
                          sample_weight=np.abs(np.array(self.train_labels)) + weight_shift)
 
         #self.train_vectors = []
@@ -170,7 +168,7 @@ class ConvMind:
         return board.get_matrix(as_player)
 
     # non-recursive, 2-layer minimax
-    def minimax_q(self, board, as_player):
+    def minimax_q(self, board):
         next_actions = []
         next_qs = []
         for x, y in copy(board.available_moves):
@@ -184,11 +182,11 @@ class ConvMind:
                 opponent_q = MIN_Q
                 for x2, y2 in copy(board.available_moves):
                     board.hypothetical_move(x2, y2)
-                    opponent_q = max(self.q(board, -as_player), opponent_q)
+                    opponent_q = max(self.q(board, -board.player_to_move), opponent_q)
                     if board.game_won():
                         opponent_q = MAX_Q
                     board.unmove()
-
+                # flip q
                 if len(board.available_moves) == 0:
                     next_qs.append(0)
                 else:
