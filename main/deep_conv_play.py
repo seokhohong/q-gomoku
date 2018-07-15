@@ -35,7 +35,7 @@ if __name__ == "__main__":
                                     as_player=current_player,
                                     retrain=True,
                                     epsilon=0.1,
-                                    max_depth=10;œ®˜˜,
+                                    max_depth=10,
                                     k=25,
                                     max_iters=20
                                     )
