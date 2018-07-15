@@ -21,20 +21,22 @@ class DeepConvMind:
         assert(size == 5)
         self.size = size
 
-        self.est = self.get_model()
+        self.value_est = self.get_value_model()
+        self.policy_est = self.get_policy_model()
 
         # initialization
-        init_examples = 10
+        init_examples = 11
 
-        labels = np.random.random((init_examples))
-        self.est.fit(x=[
+        sample_x = [
                                 random_state.randint(size=(init_examples, size, size), low = -1, high = 2).reshape(-1, size, size, 1),
                                 np.ones(init_examples).reshape(init_examples, -1),
-                            ], y=labels)
+                            ]
+        self.value_est.fit(sample_x, y=np.random.random((init_examples)))
+        self.policy_est.fit(sample_x, y=np.zeros((init_examples, self.size ** 2)))
 
         self.train_vectors = []
-        self.train_labels = []
-        self.sample_weights = []
+        self.train_q = []
+        self.train_p = []
 
         self.fitted = False
 
@@ -42,7 +44,7 @@ class DeepConvMind:
 
         self.alpha = alpha
 
-    def get_model(self):
+    def get_layers(self):
         height = self.size
         width = self.size
         kernel_size = 3
@@ -57,26 +59,44 @@ class DeepConvMind:
 
         inp = Input(shape=(height, width, 1))
         # key difference between this and conv network is padding
-        conv_1 = Convolution2D(conv_depth, (3, 3), padding='valid', activation='relu',
+        conv_1 = Convolution2D(32, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_uniform')(inp)
-        conv_2 = Convolution2D(conv_depth, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_uniform')(conv_1)
         # pool_1 = MaxPooling2D(pool_size=(pool_size, pool_size))(conv_1)
-        drop_1 = Dropout(drop_prob_1)(conv_2)
+        drop_1 = Dropout(drop_prob_1)(conv_1)
         # Now flatten to 1D, apply FC -> ReLU
         flat = Flatten()(drop_1)
         turn_input = Input(shape=(1,), name='turn')
-        #full = concatenate([flat, turn_input])
+        full = concatenate([flat, turn_input])
 
-        hidden = Dense(hidden_size, activation='relu', kernel_initializer='random_uniform')(flat)
-        drop_2 = Dropout(drop_prob_2)(hidden)
+        hidden = Dense(hidden_size, activation='relu', kernel_initializer='random_uniform')(full)
+        return inp, turn_input, hidden
 
-        out = Dense(1)(drop_2)
+    def get_value_model(self):
+        inp, turn_input, hidden = self.get_layers()
+
+        out = Dense(1)(hidden)
 
         model = Model(inputs=[inp, turn_input], outputs=out)
-        model.compile(loss=losses.mean_absolute_error, optimizer='adam', metrics=['mean_absolute_error'])
+        model.compile(loss=losses.mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
 
         return model
+
+    def get_policy_model(self):
+        inp, turn_input, hidden = self.get_layers()
+
+        out = Dense(self.size ** 2, activation='softmax')(hidden)
+
+        model = Model(inputs=[inp, turn_input], outputs=out)
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+        return model
+
+    def pvs_catch_leaves(self, leaf_nodes, new_parents, max_depth=5):
+        for parent in new_parents:
+            if parent in leaf_nodes:
+                leaf_nodes.remove(parent)
+            if parent.max_depth < max_depth:
+                leaf_nodes.update(parent.children.values())
 
     # board perception AND move turn perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
@@ -87,23 +107,26 @@ class DeepConvMind:
                                     full_move_list=minimax.MoveList(moves=()))
 
         principle_variations = [root_node]
+        leaf_nodes = set(principle_variations)
 
         for i in range(max_iters):
-            self.pvs_batch_q(board, principle_variations)
-            principle_variations = root_node.get_k_principle_variations(k=k, max_depth=max_depth)
+            self.pvs_batch(board, principle_variations)
+            self.pvs_catch_leaves(leaf_nodes, principle_variations, max_depth=max_depth)
+            principle_variations = root_node.get_k_principle_variations(leaf_nodes, k=k)
 
             if len(principle_variations) == 0:
                 print("Exhausted Search")
                 break
 
             # game winning path
-            if abs(principle_variations[0].principle_variation.q - board.player_to_move) < 1E-6:
+            if abs(principle_variations[0].principle_variation.q - board.player_to_move) < 1E-6 \
+                    and abs(principle_variations[0].principle_variation.q) > 0.9:
                 if verbose:
                     # if early termination for a deep node, generally means the nnet has a lot to learn
                     print("Early Search termination: Found Win")
                 break
 
-            # find best node (highest q)
+        # find best node (highest q)
         possible_moves = root_node.get_sorted_moves()
 
         for move, q in possible_moves:
@@ -143,16 +166,9 @@ class DeepConvMind:
 
         best_move, best_node = possible_moves[picked_action]
 
-        # this player flip is super awkward...
-        return best_move, best_node.q * board.player_to_move
+        return best_move, best_node.q
 
-    def negamax_feature_vector(self, board):
-        # essentially looking at "what is the value of my move (I've already made the move so I back up)"
-        return board.get_matrix(as_player=-board.player_to_move), -board.player_to_move
-
-    # q_memory is a dict[(move1, move2, move3, ...)] = (q, game over, True/false)
-    # q_memory / board should be treated as references
-    def pvs_batch_q(self, board, nodes_to_expand):
+    def pvs_batch(self, board, nodes_to_expand):
 
         for parent in nodes_to_expand:
             for move in parent.full_move_list.moves:
@@ -168,6 +184,9 @@ class DeepConvMind:
         q_search_nodes = []
         q_search_vectors = []
         q_search_player = []
+
+        p_search_vectors = []
+        p_search_players = []
 
         validation_matrix = np.copy(board.matrix)
 
@@ -185,7 +204,6 @@ class DeepConvMind:
                     #print('Game Won', child.full_move_list.moves, -board.player_to_move)
                     if len(child.full_move_list.moves) == 1:
                         print('win now')
-                    #child.assign_q(-1, core.board.GameState.WON)
                     child.assign_q(-board.player_to_move, core.board.GameState.WON)
 
                 elif board.game_drawn():
@@ -193,13 +211,17 @@ class DeepConvMind:
 
                 else:
                     q_search_nodes.append(child)
-                    vector, player = self.negamax_feature_vector(board)
+                    vector, player = board.get_matrix(as_player=board.player_to_move), board.player_to_move
                     q_search_vectors.append(vector)
-                    #q_search_player.append(-board.player_to_move)
                     q_search_player.append(player)
 
                 # unmove for child
                 board.unmove()
+
+            # update p
+            vector, player = board.get_matrix(as_player=board.player_to_move), board.player_to_move
+            p_search_vectors.append(vector)
+            p_search_players.append(player)
 
             # unwind parent
             for i in range(len(parent.full_move_list)):
@@ -208,31 +230,34 @@ class DeepConvMind:
         assert(np.array_equal(board.matrix, validation_matrix))
 
         if len(q_search_vectors) == 0:
+            # recalculate for wins/draws
+            for parent in nodes_to_expand:
+                parent.recalculate_q()
             return False
 
-        board_vectors = np.array(q_search_vectors).reshape(len(q_search_nodes), self.size, self.size, 1)
+        q_board_vectors = np.array(q_search_vectors).reshape(len(q_search_vectors), self.size, self.size, 1)
+        p_board_vectors = np.array(p_search_vectors).reshape(len(p_search_vectors), self.size, self.size, 1)
 
         # this helps parallelize
         # multiplication is needed to flip the Q (adjust perspective)
-        if self.turn_input:
-            predictions = np.clip(
-                    np.array(q_search_player) * self.est.predict([board_vectors, np.array(q_search_player)],
-                                                        batch_size=32).reshape(len(q_search_nodes)),
+        q_predictions = np.clip(
+                    self.value_est.predict([q_board_vectors, np.array(q_search_player)],
+                                                        batch_size=32).reshape(len(q_search_vectors)),
                     a_max=minimax.TreeNode.MAX_Q - 0.01,
                     a_min=minimax.TreeNode.MIN_Q + 0.01
             )
 
-        else:
-            predictions = np.clip(
-                    np.array(q_search_player) * self.est.predict([board_vectors],
-                                                        batch_size=32).reshape(len(q_search_nodes)),
-                    a_max=minimax.TreeNode.MAX_Q - 0.01,
-                    a_min=minimax.TreeNode.MIN_Q + 0.01
-            )
+        log_p_predictions = np.log(self.policy_est.predict([p_board_vectors, np.array(p_search_players)],
+                                                        batch_size=32).reshape((len(p_search_vectors), self.size ** 2)))
+
+        for i, parent in enumerate(nodes_to_expand):
+            for move in parent.children.keys():
+                move_index = self.move_to_index(move)
+                parent.children[move[0], move[1]].assign_p(log_p_predictions[i][move_index])
 
         for i, leaf in enumerate(q_search_nodes):
             # update with newly computed q's (only an assignment since approx, we'll compute minimax q's later)
-            leaf.assign_q(predictions[i], GameState.NOT_OVER)
+            leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
 
         # for all the nodes whose leaves' q's are calculated
         for parent in nodes_to_expand:
@@ -241,11 +266,7 @@ class DeepConvMind:
         return True
 
     def q(self, board, as_player):
-        if self.turn_input:
-            prediction = self.est.predict([[board.get_matrix(as_player).reshape(board.size, board.size, -1)], np.array([as_player])])[0][0]
-        else:
-            prediction = self.est.predict(
-                [[board.get_matrix(as_player).reshape(board.size, board.size, -1)]])[0][0]
+        prediction = self.value_est.predict([[board.get_matrix(as_player).reshape(board.size, board.size, -1)], np.array([as_player])])[0][0]
         return prediction
 
     # with epsilon probability will select random move
@@ -263,8 +284,7 @@ class DeepConvMind:
 
         new_q = (1 - self.alpha) * current_q + self.alpha * best_q
         print(current_q, best_q)
-        self.add_train_example(board, as_player, new_q)
-        self.add_train_example(board, -as_player, -new_q)
+        self.add_train_example(board, as_player, new_q, move)
 
         board.make_move(move[0], move[1])
 
@@ -275,18 +295,29 @@ class DeepConvMind:
 
         return False
 
+    def one_hot_p(self, move_index):
+        vector = np.zeros((self.size ** 2))
+        vector[move_index] = 1.
+        return vector
+
+    def move_to_index(self, move):
+        return move[0] * self.size + move[1]
+
+    def index_to_move(self, index):
+        return np.int(index / self.size), index % self.size
+
     # adds rotations
-    def add_train_example(self, board, as_player, result, invert_board=False):
-        is_my_move = 1 if board.player_to_move == as_player else -1
+    def add_train_example(self, board, as_player, result, move, invert_board=False):
         board_vectors = board.get_rotated_matrices(as_player=as_player)
 
-        weight_shift = 0.1
-
-        for vector in board_vectors:
+        for i, vector in enumerate(board_vectors):
             clamped_result = max(min(result, MAX_Q), MIN_Q)
-            self.train_vectors.append((vector, is_my_move))
-            self.train_labels.append(clamped_result)
-            self.sample_weights.append(min(abs(clamped_result) + weight_shift, 1))
+            self.train_vectors.append((vector, as_player))
+            self.train_q.append(clamped_result)
+            # get the i'th rotation
+            which_rotation = board.get_rotated_point(self.move_to_index(move))[i]
+            self.train_p.append(self.one_hot_p(which_rotation))
+            #self.train_p.append(which_rotation)
 
     def update_model(self):
 
@@ -295,28 +326,27 @@ class DeepConvMind:
             train_inputs[0].append(vector.reshape(self.size, self.size, 1))
             train_inputs[1].append(whose_move)
 
-        #self.est.fit(np.vstack(train_vectors), np.sign(train_labels) * np.sqrt(np.abs(train_labels)))
-        #self.est.fit(np.vstack(train_vectors), train_labels)
-
-        weight_shift = 0.1
-
         print(len(self.train_vectors))
         if len(self.train_vectors) > 0:
-            self.est.fit(x=train_inputs,
-                         y=self.train_labels,
-                         validation_split=0.1,
-                         sample_weight=np.abs(np.array(self.train_labels)) + weight_shift)
+            self.value_est.fit(x=train_inputs,
+                                y=self.train_q,
+                                validation_split=0.1)
+            self.policy_est.fit(x=train_inputs,
+                                y=np.array(self.train_p),
+                                validation_split=0.1)
 
-        max_vectors = 10000
+        max_vectors = 500
         while len(self.train_vectors) > max_vectors:
             self.train_vectors = self.train_vectors[100:]
-            self.train_labels = self.train_labels[100:]
-            self.sample_weights = self.sample_weights[100:]
+            self.train_p = self.train_p[100:]
+            self.train_q = self.train_q[100:]
 
         print('Num Train Vectors', len(self.train_vectors))
 
-    def save(self, file):
-        self.est.save(file)
+    def save(self, filename):
+        self.value_est.save(filename + '_value.net')
+        self.policy_est.save(filename + '_policy.net')
 
-    def load(self, file):
-        self.est = keras.models.load_model(file)
+    def load(self, filename):
+        self.value_est = keras.models.load_model(filename + '_value.net')
+        self.policy_est = keras.models.load_model(filename + '_policy.net')

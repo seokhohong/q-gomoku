@@ -121,11 +121,19 @@ class PVSNode(TreeNode):
         self.principle_variation = None
         self.q = None
 
+        # log likelihood of playing this move given parent state
+        self.log_local_p = 0
+        # log likelihood of playing this move given root board state (used for PVS search)
+        self.log_total_p = 0
+
     def find_pvs(self):
         # found child
-        if len(self.children) == 0:
+        if self.has_children():
             return self.full_move_list, self.q
         return
+
+    def has_children(self):
+        return len(self.children) > 0
 
     # note this does NOT compute q for child
     def create_child(self, move):
@@ -143,26 +151,29 @@ class PVSNode(TreeNode):
         self.children[move] = child
         return child
 
+    # play shorter sequences if advantageous, otherwise play longer sequences
+    def move_goodness(self):
+        if self.q > 0:
+            return self.q - len(self.principle_variation.full_move_list) * 0.001
+        else:
+            return self.q + len(self.principle_variation.full_move_list) * 0.001
+
     def get_sorted_moves(self):
-        # TODO: play shorter sequences if advantageous, otherwise play longer sequences
-        key = lambda x: x[1].q - len(x[1].full_move_list) * 0.001
-        return sorted(self.children.items(), key=key, reverse=self.is_maximizing)
+        return sorted(self.children.items(), key= lambda x : x[1].move_goodness(), reverse=self.is_maximizing)
 
-    def get_k_principle_variations(self, k=5, max_depth=5):
-        if k > len(self.children):
-            k = len(self.children)
-        sorted_children = sorted(list(self.children.values()), key=lambda x: x.get_q_importance(), reverse=self.is_maximizing)
-
-        valid_expansions = []
-        for child in sorted_children:
-            if child.principle_variation.game_status == GameState.NOT_OVER and \
-                    len(child.principle_variation.full_move_list.moves) < max_depth:
-                valid_expansions.append(child.principle_variation)
-                if len(valid_expansions) >= k:
-                    break
-
-        return valid_expansions
-
+    def get_k_principle_variations(self, leaf_nodes, k=5):
+        # include the best move according to q
+        q_best = self.principle_variation
+        # draw
+        if q_best is None:
+            return []
+        # include k-1 most likely moves according to p
+        candidates = [node for node in list(leaf_nodes) if node.game_status == GameState.NOT_OVER
+                                                                    and node != q_best]
+        if q_best.game_status == GameState.NOT_OVER:
+            return [q_best] + sorted(candidates, key=lambda x: x.log_total_p, reverse=True)[:k - 1]
+        else:
+            return sorted(candidates, key=lambda x: x.log_total_p, reverse=True)[:k]
 
     # used ONLY for leaf assignment
     def assign_q(self, q, game_status):
@@ -174,6 +185,10 @@ class PVSNode(TreeNode):
         # for a leaf node, the principle variation is itself
         self.principle_variation = self
         self.q = q
+
+    def assign_p(self, log_p):
+        self.log_local_p = log_p
+        self.log_total_p = self.parent.log_total_p + self.log_local_p
 
     def recalculate_q(self):
         # take the largest (or smallest) q across all seen moves
@@ -188,9 +203,9 @@ class PVSNode(TreeNode):
             prev_q = np.inf
 
         if self.is_maximizing:
-            best_move = max(self.children.items(), key=lambda x: x[1].q)[0]
+            best_move = max(self.children.items(), key=lambda x : x[1].move_goodness())[0]
         else:
-            best_move = min(self.children.items(), key=lambda x: x[1].q)[0]
+            best_move = min(self.children.items(), key=lambda x : x[1].move_goodness())[0]
 
         # using negamax framework
         self.principle_variation = self.children[best_move].principle_variation
@@ -201,4 +216,4 @@ class PVSNode(TreeNode):
             self.parent.recalculate_q()
 
     def __str__(self):
-        return "PV: " + str(self.principle_variation.full_move_list.moves) + " Q: " + str(self.q) + " Max Depth: " + str(self.max_depth)
+        return ("PV: " + str(self.principle_variation.full_move_list.moves) + " Q: {0:.4f} P: {1:.4f} Max Depth: " + str(self.max_depth)).format(self.q, self.log_total_p)

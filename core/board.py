@@ -1,4 +1,5 @@
 from enum import Enum
+from collections import defaultdict
 
 import numpy as np
 
@@ -36,6 +37,9 @@ class Board:
             for j in range(self.size):
                 self.available_moves.add((i, j))
 
+        self.cached_point_rotations = defaultdict(list)
+        self.cache_rotations()
+
         # whether current game_state is accurate
         self.state_computed = False
 
@@ -70,16 +74,44 @@ class Board:
             matrix,
             matrix.transpose(),
             np.rot90(matrix),
-            np.rot90(matrix).transpose()
+            np.rot90(matrix).transpose(),
+            np.rot90(matrix, 2),
+            np.rot90(matrix, 2).transpose(),
+            np.rot90(matrix, 3),
+            np.rot90(matrix, 3).transpose()
         ]
 
+    def cache_rotations(self):
+        indices = np.array(range(self.size ** 2)).reshape(self.size, self.size)
+        for matrix in [
+                indices,
+                indices.transpose(),
+                np.rot90(indices),
+                np.rot90(indices).transpose(),
+                np.rot90(indices, 2),
+                np.rot90(indices, 2).transpose(),
+                np.rot90(indices, 3),
+                np.rot90(indices, 3).transpose()
+            ]:
+            for x in range(self.size):
+                for y in range(self.size):
+                    self.cached_point_rotations[matrix[x, y]].append(indices[x, y])
+
+
+    def coordinate_to_index(self, x, y):
+        return x * self.size + y
+
+    def get_rotated_point(self, index):
+        return self.cached_point_rotations[index]
+
+    # deprecate
     def make_move(self, x, y):
         assert(self.game_state is GameState.NOT_OVER)
         self.ops.append(Move(self.player_to_move, x, y))
         self.matrix[x, y] = self.player_to_move
         self.available_moves.remove((x, y))
         self.flip_player_to_move()
-        self._mark_not_computed()
+        self.compute_game_state()
 
     def flip_player_to_move(self):
         if self.player_to_move == Board.FIRST_PLAYER:
@@ -143,15 +175,16 @@ class Board:
     def pprint(self):
         def display_char(x, y):
             move = utils.peek_stack(self.ops)
-            was_last_move = (x == move.x and y == move.y)
-            if self.matrix[x, y] == Board.FIRST_PLAYER:
-                if was_last_move:
-                    return 'X'
-                return 'x'
-            elif self.matrix[x, y] == Board.SECOND_PLAYER:
-                if was_last_move:
-                    return 'O'
-                return 'o'
+            if move:
+                was_last_move = (x == move.x and y == move.y)
+                if self.matrix[x, y] == Board.FIRST_PLAYER:
+                    if was_last_move:
+                        return 'X'
+                    return 'x'
+                elif self.matrix[x, y] == Board.SECOND_PLAYER:
+                    if was_last_move:
+                        return 'O'
+                    return 'o'
             return ' '
         board_string = ""
         for i in range(0, self.size):

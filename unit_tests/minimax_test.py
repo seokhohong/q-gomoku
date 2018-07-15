@@ -70,7 +70,7 @@ class TestBoard(unittest.TestCase):
     #
     #     print(board.pprint())
     #
-    #     possible_moves = mind.pvs_best_moves(board, board.player_to_move, max_iters=1, k=25)
+    #     possible_moves = mind.pvs_best_moves(board, max_iters=1, k=25)
     #     print(possible_moves[0][1])
     #     self.assertAlmostEqual(possible_moves[0][1].principle_variation.q, 1)
     #
@@ -262,29 +262,94 @@ class TestBoard(unittest.TestCase):
     #             else:
     #                 self.assertAlmostEqual(elem1, elem2, places=3)
 
-    def test_converged(self):
+    # def test_step_consistency(self):
+    #
+    #     mind = DeepConvMind(size=5, alpha=0.5, turn_input=True)
+    #
+    #     board = Board(size=5, win_chain_length=4)
+    #
+    #     board.make_move(2, 2)
+    #     board.make_move(3, 2)
+    #     board.make_move(1, 2)
+    #     board.make_move(3, 3)
+    #     board.make_move(2, 1)
+    #
+    #     root_node = minimax.PVSNode(parent=None,
+    #                                 is_maximizing=True,
+    #                                 full_move_list=minimax.MoveList(moves=()))
+    #
+    #     principle_variations = [root_node]
+    #     mind.pvs_batch_q(board, principle_variations)
+    #     print(board.pprint())
+    #
+    #     next_q = root_node.children[3, 1].q
+    #
+    #     board.make_move(3, 1)
+    #
+    #     self.assertAlmostEqual(mind.q(board, 1), next_q)
+    #
+    #     board.unmove()
+    #     mind.pvs_batch_q(board, root_node.children.values())
+    #     next_q = root_node.children[3, 1].children[1, 1].q
+    #
+    #     board.make_move(3, 1)
+    #     board.make_move(1, 1)
+    #
+    #     self.assertAlmostEqual(mind.q(board, -1), next_q)
+    #
+    #     board.unmove()
+    #     board.unmove()
+    #
+    #     mind.pvs_batch_q(board, root_node.children[3, 1].children.values())
+    #     mind.pvs_batch_q(board, root_node.children[4, 1].children.values())
+    #     next_q = root_node.children[3, 1].children[1, 1].children[4, 1].q
+    #
+    #     board.make_move(3, 1)
+    #     board.make_move(1, 1)
+    #     board.make_move(4, 1)
+    #
+    #     self.assertAlmostEqual(mind.q(board, 1), next_q, places=5)
+    #     self.assertAlmostEqual(mind.q(board, 1), root_node.children[4, 1].children[1, 1].children[3, 1].q, places=5)
 
-        mind = DeepConvMind(size=5, alpha=0.5)
-        mind.load('deep_conv_2500.pkl')
+    # def test_debug(self):
+    #     mind = DeepConvMind(size=5, alpha=0.5, turn_input=True)
+    #     mind.load('../models/kernel_3,2.pkl')
+    #     board = Board(size=5, win_chain_length=4)
+    #
+    #     root_node = minimax.PVSNode(parent=None,
+    #                                 is_maximizing=False,
+    #                                 full_move_list=minimax.MoveList(moves=()))
+    #
+    #     board.make_move(2, 2)
+    #     board.make_move(1, 3)
+    #     board.make_move(3, 1)
+    #     board.make_move(3, 3)
+    #     print(board.pprint())
+    #     principle_variations = [root_node]
+    #     #mind.pvs_batch_q(board, principle_variations)
+    #     #mind.pvs_batch_q(board, root_node.children.values())
+    #     #mind.pvs_batch_q(board, root_node.children[4, 1].children.values())
+    #
+    #     print('pvs', mind.pvs(board, max_iters=50, k=25, max_depth=8))
+
+    def test_win(self):
+        mind = DeepConvMind(size=5, alpha=0.5, turn_input=True)
 
         board = Board(size=5, win_chain_length=4)
 
+        root_node = minimax.PVSNode(parent=None,
+                                    is_maximizing=False,
+                                    full_move_list=minimax.MoveList(moves=()))
 
-        board.make_move(2, 2)
-        board.make_move(3, 3)
-        board.make_move(1, 1)
-        board.make_move(1, 3)
+        board.make_move(2, 1)
         board.make_move(2, 3)
-        print(board.pprint())
-        #mind.make_move(board, -1, max_depth=7, epsilon=0)
-
-        print(mind.q(board, -1))
-        print(mind.q(board, 1))
-
         board.make_move(1, 2)
+        board.make_move(0, 2)
+        board.make_move(0, 3)
+        print(board.pprint())
+        print(mind.pvs(board, max_iters=25, k=25, max_depth=3))
 
-        print(mind.q(board, 1))
-        print(mind.q(board, -1))
+
 
 if __name__ == '__main__':
     unittest.main()

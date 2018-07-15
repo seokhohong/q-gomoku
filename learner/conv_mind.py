@@ -64,7 +64,7 @@ class ConvMind:
 
     # with epsilon probability will select random move
     # returns whether game has concluded or not
-    def make_move(self, board, as_player, retrain=True, verbose=True, epsilon=0.1):
+    def make_move(self, board, as_player, retrain=True, verbose=True, epsilon=0.1, max_depth=2):
 
         current_q = self.q(board, as_player)
         assert(as_player == board.player_to_move)

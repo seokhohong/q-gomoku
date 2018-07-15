@@ -82,6 +82,21 @@ class TestBoard(unittest.TestCase):
         board.make_move(0, 2)
         self.assertTrue(board.game_won())
 
+    def test_draw(self):
+        board = Board(size=3, win_chain_length=3)
+        board.make_move(0, 0)
+        board.make_move(0, 2)
+        board.make_move(0, 1)
+        board.make_move(1, 0)
+        board.make_move(1, 1)
+        board.make_move(2, 2)
+        board.make_move(2, 0)
+        board.make_move(2, 1)
+        board.make_move(1, 2)
+        print(board.pprint())
+        self.assertTrue(board.game_drawn())
+        self.assertFalse(board.game_won())
+
 if __name__ == '__main__':
     unittest.main()
 
