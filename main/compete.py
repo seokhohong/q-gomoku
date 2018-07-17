@@ -14,17 +14,19 @@ def versus(mind1, mind2, rounds=100):
         print('Playing Versus Game', i)
         tourney_board = board.Board(size=5, win_chain_length=4)
         # make a random move for first player
-        random_move = random.sample(tourney_board.available_moves, 1)[0]
-        tourney_board.make_move(random_move[0], random_move[1])
+        for i in range(random.randint(0, 3)):
+            tourney_board.make_random_move()
         players = {}
         players[1] = mind1
         players[-1] = mind2
         while True:
-            result = players[tourney_board.player_to_move].make_move(tourney_board, as_player=tourney_board.player_to_move, retrain=False, verbose=False, epsilon=0.01, max_depth=3)
+            result = players[tourney_board.player_to_move].make_move(tourney_board, as_player=tourney_board.player_to_move,
+                                                                     retrain=False, verbose=False, epsilon=0.01, max_depth=15,
+                                                                     max_iters=20)
             print(tourney_board.pprint())
             if result:
                 if tourney_board.game_won():
-                    wins[tourney_board.player_to_move] += 1
+                    wins[-tourney_board.player_to_move] += 1
                 else:
                     draws += 1
                 break
@@ -34,15 +36,13 @@ def versus(mind1, mind2, rounds=100):
 
 if __name__ == "__main__":
     SIZE=5
-    #mind1 = deep_conv_mind.DeepConvMind(size=SIZE, alpha=0.1)
-    mind1 = conv_mind.ConvMind(size=SIZE, alpha=0.1)
-    mind1.load('conv_mind_50.pkl')
-    #mind1.load('deep_alt_network.pkl')
+    mind1 = deep_conv_mind.DeepConvMind(size=SIZE, alpha=0.1)
+    #mind1 = conv_mind.ConvMind(size=SIZE, alpha=0.1)
+    #mind1.load('conv_mind_50.pkl')
+    mind1.load('../models/pq_net_32_32')
 
     mind2 = deep_conv_mind.DeepConvMind(size=SIZE, alpha=0.1)
-    #mind2.load('../models/pretty_good_5000.pkl')
-    #mind2.load('../models/deep_2,3,full_network.pkl')
-    mind2.load('../models/deep_convolution_2,3.pkl')
+    mind2.load('../models/pq_net_32')
 
     wins = defaultdict(int)
     draws = 0

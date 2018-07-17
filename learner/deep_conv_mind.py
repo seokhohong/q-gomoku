@@ -1,8 +1,8 @@
 import copy
 
 import numpy as np
-from keras.layers import Input, Convolution2D, Dense, Dropout, Flatten, concatenate
-from keras.models import Model  # basic class for specifying and training a neural networkf
+from keras.layers import Input, Convolution2D, Dense, Dropout, Flatten, concatenate, BatchNormalization
+from keras.models import Model  # basic class for specifying and training a neural network
 from keras import losses
 import keras
 
@@ -25,7 +25,7 @@ class DeepConvMind:
         self.policy_est = self.get_policy_model()
 
         # initialization
-        init_examples = 11
+        init_examples = 10
 
         sample_x = [
                                 random_state.randint(size=(init_examples, size, size), low = -1, high = 2).reshape(-1, size, size, 1),
@@ -45,30 +45,27 @@ class DeepConvMind:
         self.alpha = alpha
 
     def get_layers(self):
-        height = self.size
-        width = self.size
-        kernel_size = 3
-        conv_depth = 16
-        pool_size = 2
-        drop_prob_1 = 0.2
-        hidden_size = 15
-        drop_prob_2 = 0.1
+        inp = Input(shape=(self.size, self.size, 1))
 
-        batch_size = 100
-        epochs = 10
-
-        inp = Input(shape=(height, width, 1))
+        bn1 = BatchNormalization()(inp)
         # key difference between this and conv network is padding
-        conv_1 = Convolution2D(32, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_uniform')(inp)
-        # pool_1 = MaxPooling2D(pool_size=(pool_size, pool_size))(conv_1)
-        drop_1 = Dropout(drop_prob_1)(conv_1)
-        # Now flatten to 1D, apply FC -> ReLU
-        flat = Flatten()(drop_1)
+        conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_uniform')(bn1)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_uniform')(bn2)
+        bn3 = BatchNormalization()(conv_2)
+        conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_uniform')(bn3)
+        bn4 = BatchNormalization()(conv_3)
+
+        flat = Flatten()(bn4)
         turn_input = Input(shape=(1,), name='turn')
         full = concatenate([flat, turn_input])
 
-        hidden = Dense(hidden_size, activation='relu', kernel_initializer='random_uniform')(full)
+        hidden = Dense(30, activation='relu', kernel_initializer='random_uniform')(full)
+
+
         return inp, turn_input, hidden
 
     def get_value_model(self):
@@ -84,7 +81,8 @@ class DeepConvMind:
     def get_policy_model(self):
         inp, turn_input, hidden = self.get_layers()
 
-        out = Dense(self.size ** 2, activation='softmax')(hidden)
+        bn4 = BatchNormalization()(hidden)
+        out = Dense(self.size ** 2, activation='softmax')(bn4)
 
         model = Model(inputs=[inp, turn_input], outputs=out)
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -116,14 +114,6 @@ class DeepConvMind:
 
             if len(principle_variations) == 0:
                 print("Exhausted Search")
-                break
-
-            # game winning path
-            if abs(principle_variations[0].principle_variation.q - board.player_to_move) < 1E-6 \
-                    and abs(principle_variations[0].principle_variation.q) > 0.9:
-                if verbose:
-                    # if early termination for a deep node, generally means the nnet has a lot to learn
-                    print("Early Search termination: Found Win")
                 break
 
         # find best node (highest q)
@@ -330,12 +320,14 @@ class DeepConvMind:
         if len(self.train_vectors) > 0:
             self.value_est.fit(x=train_inputs,
                                 y=self.train_q,
+                                shuffle=True,
                                 validation_split=0.1)
             self.policy_est.fit(x=train_inputs,
                                 y=np.array(self.train_p),
+                                shuffle=True,
                                 validation_split=0.1)
 
-        max_vectors = 500
+        max_vectors = 10000
         while len(self.train_vectors) > max_vectors:
             self.train_vectors = self.train_vectors[100:]
             self.train_p = self.train_p[100:]

@@ -2,6 +2,7 @@ from enum import Enum
 from collections import defaultdict
 
 import numpy as np
+import random
 
 from util import utils
 
@@ -112,6 +113,10 @@ class Board:
         self.available_moves.remove((x, y))
         self.flip_player_to_move()
         self.compute_game_state()
+
+    def make_random_move(self):
+        move_x, move_y = random.choice(list(self.available_moves))
+        self.hypothetical_move(move_x, move_y)
 
     def flip_player_to_move(self):
         if self.player_to_move == Board.FIRST_PLAYER:
