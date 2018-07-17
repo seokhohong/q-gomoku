@@ -15,10 +15,9 @@ random_state = np.random.RandomState(42)
 MIN_Q = -1
 MAX_Q = 1
 
-class DeepConvMind:
-    def __init__(self, size, alpha, turn_input=True):
+class PQMind:
+    def __init__(self, size, alpha, turn_input=True, init=True):
 
-        assert(size == 5)
         self.size = size
 
         self.value_est = self.get_value_model()
@@ -27,12 +26,13 @@ class DeepConvMind:
         # initialization
         init_examples = 10
 
-        sample_x = [
-                                random_state.randint(size=(init_examples, size, size), low = -1, high = 2).reshape(-1, size, size, 1),
-                                np.ones(init_examples).reshape(init_examples, -1),
-                            ]
-        self.value_est.fit(sample_x, y=np.random.random((init_examples)))
-        self.policy_est.fit(sample_x, y=np.zeros((init_examples, self.size ** 2)))
+        if init:
+            sample_x = [
+                                    random_state.random_integers(-1, 1, size=(init_examples, size, size, 1)),
+                                    random_state.random_integers(-1, 1, size=(init_examples)).reshape(init_examples, -1),
+                                ]
+            self.value_est.fit(sample_x, y=np.zeros((init_examples)), epochs=1, batch_size=100)
+            self.policy_est.fit(sample_x, y=np.zeros((init_examples, self.size ** 2)))
 
         self.train_vectors = []
         self.train_q = []
@@ -47,26 +47,26 @@ class DeepConvMind:
     def get_layers(self):
         inp = Input(shape=(self.size, self.size, 1))
 
-        #bn1 = BatchNormalization()(inp)
+        bn1 = BatchNormalization()(inp)
         # key difference between this and conv network is padding
         conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_uniform')(inp)
+                               kernel_initializer='random_uniform')(bn1)
         bn2 = BatchNormalization()(conv_1)
-        conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_uniform')(bn2)
-        bn3 = BatchNormalization()(conv_2)
-        conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_uniform')(bn3)
-        bn4 = BatchNormalization()(conv_3)
+        #conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+        ##                       kernel_initializer='random_uniform')(bn2)
+        #bn3 = BatchNormalization()(conv_2)
+        #conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+        #                       kernel_initializer='random_uniform')(bn3)
+        #bn4 = BatchNormalization()(conv_3)
 
-        flat = Flatten()(bn4)
+        flat = Flatten()(bn2)
         turn_input = Input(shape=(1,), name='turn')
         full = concatenate([flat, turn_input])
 
-        hidden = Dense(30, activation='relu', kernel_initializer='random_uniform')(full)
+        hidden = Dense(15, activation='relu', kernel_initializer='random_uniform')(full)
+        bn4 = BatchNormalization()(hidden)
 
-
-        return inp, turn_input, hidden
+        return inp, turn_input, bn4
 
     def get_value_model(self):
         inp, turn_input, hidden = self.get_layers()
@@ -81,8 +81,8 @@ class DeepConvMind:
     def get_policy_model(self):
         inp, turn_input, hidden = self.get_layers()
 
-        bn4 = BatchNormalization()(hidden)
-        out = Dense(self.size ** 2, activation='softmax')(bn4)
+
+        out = Dense(self.size ** 2, activation='softmax')(hidden)
 
         model = Model(inputs=[inp, turn_input], outputs=out)
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -232,13 +232,13 @@ class DeepConvMind:
         # multiplication is needed to flip the Q (adjust perspective)
         q_predictions = np.clip(
                     self.value_est.predict([q_board_vectors, np.array(q_search_player)],
-                                                        batch_size=32).reshape(len(q_search_vectors)),
+                                                        batch_size=64).reshape(len(q_search_vectors)),
                     a_max=minimax.TreeNode.MAX_Q - 0.01,
                     a_min=minimax.TreeNode.MIN_Q + 0.01
             )
 
         log_p_predictions = np.log(self.policy_est.predict([p_board_vectors, np.array(p_search_players)],
-                                                        batch_size=32).reshape((len(p_search_vectors), self.size ** 2)))
+                                                        batch_size=64).reshape((len(p_search_vectors), self.size ** 2)))
 
         for i, parent in enumerate(nodes_to_expand):
             for move in parent.children.keys():

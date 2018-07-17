@@ -1,6 +1,4 @@
-from learner import basic_mind
-from learner import no_mind
-from learner import minimax_mind
+from learner import pqmind
 from learner import deep_conv_mind
 from core import board
 from copy import deepcopy
@@ -16,22 +14,31 @@ import cProfile
 
 minds = []
 
-SIZE = 5
+SIZE = 13
 
 def depth_function(i):
     if i < 500:
+        return 1
+    elif i < 1000:
         return 2
     return 15
 
+def iter_function(i):
+    if i < 500:
+        return 1
+    elif i < 1000:
+        return 10
+    elif i < 2000:
+        return 20
+
 def run():
-    mind = deep_conv_mind.DeepConvMind(size=SIZE, alpha=0.2, turn_input=True)
-    #mind.load('../models/pq_net_32_32')
-    #mind.load('conv_mind_50.pkl')
+    mind = pqmind.PQMind(size=SIZE, alpha=0.2, turn_input=True, init=True)
+    mind.load('../models/pq_r1')
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
 
-    for i in range(50000):
-        round_board = board.Board(size=SIZE, win_chain_length=4)
+    for i in range(500, 50000):
+        round_board = board.Board(size=SIZE, win_chain_length=5)
 
         print('Game', i)
 
@@ -42,23 +49,23 @@ def run():
         current_player = round_board.player_to_move
 
         #    versus(c_mind, mind)
-        #if i % 50 == 0 and i > 0:
-        #    mind.save('../models/pq_bn_64_64_64')
-        #if i % 100 == 1:
-        #    with open('../models/train_vectors.npz', 'wb') as f:
-        #        np.savez(f, train_vectors=mind.train_vectors, train_p=mind.train_p, train_q=mind.train_q)
+        if i % 50 == 0 and i > 0:
+            mind.save('../models/pq_r1')
+        if i % 100 == 1:
+            with open('../models/train_vectors_11_11.npz', 'wb') as f:
+                np.savez(f, train_vectors=mind.train_vectors, train_p=mind.train_p, train_q=mind.train_q)
         while True:
             result = mind.make_move(round_board,
                                     as_player=current_player,
                                     retrain=True,
                                     epsilon=0.1,
                                     max_depth=depth_function(i),
-                                    k=25,
-                                    max_iters=20,
+                                    k=SIZE ** 2,
+                                    max_iters=iter_function(i),
                                     )
             print(round_board.pprint())
             current_player = -current_player
             if result:
                 break
 if __name__ == "__main__":
-    cProfile.run('run()')
+    run()
