@@ -52,7 +52,7 @@ def run():
         if i % 50 == 0 and i > 0:
             mind.save('../models/pq_r1')
         if i % 100 == 1:
-            with open('../models/train_vectors_11_11.npz', 'wb') as f:
+            with open('../models/train_vectors_13_13.npz', 'wb') as f:
                 np.savez(f, train_vectors=mind.train_vectors, train_p=mind.train_p, train_q=mind.train_q)
         while True:
             result = mind.make_move(round_board,

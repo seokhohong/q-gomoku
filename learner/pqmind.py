@@ -256,7 +256,7 @@ class PQMind:
         return True
 
     def q(self, board, as_player):
-        prediction = self.value_est.predict([[board.get_matrix(as_player).reshape(board.size, board.size, -1)], np.array([as_player])])[0][0]
+        prediction = self.value_est.predict([np.array([board.get_matrix(as_player).reshape(board.size, board.size, -1)]), np.array([as_player])])[0][0]
         return prediction
 
     # with epsilon probability will select random move
@@ -315,11 +315,14 @@ class PQMind:
         for vector, whose_move in self.train_vectors:
             train_inputs[0].append(vector.reshape(self.size, self.size, 1))
             train_inputs[1].append(whose_move)
+            
+        train_inputs[0] = np.array(train_inputs[0])
+        train_inputs[1] = np.array(train_inputs[1])
 
         print(len(self.train_vectors))
         if len(self.train_vectors) > 0:
             self.value_est.fit(x=train_inputs,
-                                y=self.train_q,
+                                y=np.array(self.train_q),
                                 shuffle=True,
                                 validation_split=0.1)
             self.policy_est.fit(x=train_inputs,
@@ -327,7 +330,7 @@ class PQMind:
                                 shuffle=True,
                                 validation_split=0.1)
 
-        max_vectors = 10000
+        max_vectors = 100000
         while len(self.train_vectors) > max_vectors:
             self.train_vectors = self.train_vectors[100:]
             self.train_p = self.train_p[100:]
