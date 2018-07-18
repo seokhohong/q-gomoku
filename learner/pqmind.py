@@ -228,17 +228,18 @@ class PQMind:
         q_board_vectors = np.array(q_search_vectors).reshape(len(q_search_vectors), self.size, self.size, 1)
         p_board_vectors = np.array(p_search_vectors).reshape(len(p_search_vectors), self.size, self.size, 1)
 
-        # this helps parallelize
-        # multiplication is needed to flip the Q (adjust perspective)
-        q_predictions = np.clip(
-                    self.value_est.predict([q_board_vectors, np.array(q_search_player)],
-                                                        batch_size=64).reshape(len(q_search_vectors)),
-                    a_max=minimax.TreeNode.MAX_Q - 0.01,
-                    a_min=minimax.TreeNode.MIN_Q + 0.01
-            )
+        with tf.device('/gpu:1'):
+            # this helps parallelize
+            # multiplication is needed to flip the Q (adjust perspective)
+            q_predictions = np.clip(
+                        self.value_est.predict([q_board_vectors, np.array(q_search_player)],
+                                                            batch_size=64).reshape(len(q_search_vectors)),
+                        a_max=minimax.TreeNode.MAX_Q - 0.01,
+                        a_min=minimax.TreeNode.MIN_Q + 0.01
+                )
 
-        log_p_predictions = np.log(self.policy_est.predict([p_board_vectors, np.array(p_search_players)],
-                                                        batch_size=64).reshape((len(p_search_vectors), self.size ** 2)))
+            log_p_predictions = np.log(self.policy_est.predict([p_board_vectors, np.array(p_search_players)],
+                                                            batch_size=64).reshape((len(p_search_vectors), self.size ** 2)))
 
         for i, parent in enumerate(nodes_to_expand):
             for move in parent.children.keys():
@@ -320,15 +321,16 @@ class PQMind:
         train_inputs[1] = np.array(train_inputs[1])
 
         print(len(self.train_vectors))
-        if len(self.train_vectors) > 0:
-            self.value_est.fit(x=train_inputs,
-                                y=np.array(self.train_q),
-                                shuffle=True,
-                                validation_split=0.1)
-            self.policy_est.fit(x=train_inputs,
-                                y=np.array(self.train_p),
-                                shuffle=True,
-                                validation_split=0.1)
+        with tf.device('/gpu:1'):
+            if len(self.train_vectors) > 0:
+                self.value_est.fit(x=train_inputs,
+                                    y=np.array(self.train_q),
+                                    shuffle=True,
+                                    validation_split=0.1)
+                self.policy_est.fit(x=train_inputs,
+                                    y=np.array(self.train_p),
+                                    shuffle=True,
+                                    validation_split=0.1)
 
         max_vectors = 100000
         while len(self.train_vectors) > max_vectors:
@@ -345,3 +347,7 @@ class PQMind:
     def load(self, filename):
         self.value_est = keras.models.load_model(filename + '_value.net')
         self.policy_est = keras.models.load_model(filename + '_policy.net')
+       
+    def load(self, value_file, policy_file):
+        self.value_est = keras.models.load_model(value_file)
+        self.policy_est = keras.models.load_model(policy_file)
