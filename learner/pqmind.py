@@ -104,7 +104,7 @@ class PQMind:
         q_best = root_node.principle_variation
         # draw
         if q_best is None:
-            return []
+            return None
 
         # include k-1 most likely moves according to p
         if q_best.game_status == GameState.NOT_OVER:
@@ -128,7 +128,7 @@ class PQMind:
             self.pvs_catch_leaves(leaf_nodes, principle_variations, max_depth=max_depth)
             principle_variations = self.pvs_k_principle_variations(root_node, leaf_nodes, k=k)
 
-            if len(principle_variations) == 0:
+            if principle_variations:
                 print("Exhausted Search")
                 break
 
@@ -359,7 +359,7 @@ class PQMind:
         self.value_est.save(filename + '_value.net')
         self.policy_est.save(filename + '_policy.net')
 
-    def load(self, filename):
+    def load_net(self, filename):
         self.value_est = keras.models.load_model(filename + '_value.net')
         self.policy_est = keras.models.load_model(filename + '_policy.net')
        

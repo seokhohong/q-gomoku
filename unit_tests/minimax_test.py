@@ -8,6 +8,7 @@ set_random_seed(2)
 from core.board import Board
 from core import minimax
 from learner.deep_conv_mind import DeepConvMind
+from learner.pqmind import PQMind
 from core import optimized_minimax
 from learner.conv_mind import ConvMind
 import numpy as np
@@ -310,17 +311,16 @@ class TestBoard(unittest.TestCase):
     #     print(mind.pvs(board, max_iters=25, k=25, max_depth=3))
 
     def test_compare_minimax(self):
-        mind = DeepConvMind(size=5, alpha=0.5, turn_input=True)
-        mind.load('../models/pq_net_32')
+        mind = PQMind(size=5, alpha=0.5, turn_input=True)
+        mind.load_net('../models/pq_net_32')
         board = Board(size=5, win_chain_length=4)
 
-        root_node = minimax.PVSNode(parent=None,
-                                    is_maximizing=False,
-                                    full_move_list=minimax.MoveList(moves=()))
-
-        principle_variations = [root_node]
-        mind.pvs_batch(board, principle_variations)
-        mind.pvs_batch(board, root_node.children.values())
+        board.make_move(0, 0)
+        board.make_move(1, 0)
+        board.make_move(0, 1)
+        board.make_move(1, 1)
+        board.make_move(3, 2)
+        board.make_move(1, 2)
 
         opt_root_node = optimized_minimax.PVSNode(parent=None,
                                     is_maximizing=False,
@@ -330,13 +330,17 @@ class TestBoard(unittest.TestCase):
         mind.pvs_batch(board, principle_variations)
         mind.pvs_batch(board, opt_root_node.children.values())
 
-        print(root_node)
-        for child in root_node.children.values():
-            print(child)
-
         print(opt_root_node)
-        for opt_root_node in opt_root_node.children.values():
+        for opt_root_node in sorted(opt_root_node.children.values(), key=lambda x: x.move_goodness, reverse=True):
             print(opt_root_node)
+
+        print("")
+        print(mind.pvs(board, max_iters=10))
+
+        board.make_move(3, 3)
+
+        for move, node in mind.pvs_best_moves(board, max_iters=10):
+            print(move, node)
 
 if __name__ == '__main__':
     unittest.main()

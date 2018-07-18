@@ -97,6 +97,20 @@ class TestBoard(unittest.TestCase):
         self.assertTrue(board.game_drawn())
         self.assertFalse(board.game_won())
 
+    def test_big(self):
+        board = Board(size=13, win_chain_length=5)
+        board.make_move(1, 12)
+        board.make_move(6, 7)
+        board.make_move(1, 5)
+        board.make_move(5, 8)
+        board.make_move(7, 3)
+        board.make_move(7, 6)
+        board.make_move(5, 1)
+        board.make_move(8, 5)
+        board.make_move(10, 2)
+        board.make_move(9, 4)
+        self.assertTrue(board.game_won())
+
 if __name__ == '__main__':
     unittest.main()
 

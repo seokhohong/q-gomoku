@@ -78,6 +78,15 @@ class PVSNode:
         self.principle_variation = self
         self.q = q
 
+        self.assign_move_goodness()
+
+    def assign_move_goodness(self):
+        # play shorter sequences if advantageous, otherwise play longer sequences
+        if self.q > 0:
+            self.move_goodness = self.q - len(self.principle_variation.full_move_list) * 0.001
+        else:
+            self.move_goodness = self.q + len(self.principle_variation.full_move_list) * 0.001
+
     def assign_p(self, log_p):
         self.log_local_p = log_p
         self.log_total_p = self.parent.log_total_p + self.log_local_p
@@ -103,8 +112,7 @@ class PVSNode:
         self.principle_variation = self.children[best_move].principle_variation
         self.q = self.children[best_move].q
 
-        # play shorter sequences if advantageous, otherwise play longer sequences
-        self.move_goodness = self.q - len(self.principle_variation.full_move_list) * 0.001
+        self.assign_move_goodness()
 
         if self.parent and abs(prev_q - self.q) > 1E-6:
             # update pvs for parent
