@@ -8,6 +8,7 @@ set_random_seed(2)
 from core.board import Board
 from core import minimax
 from learner.deep_conv_mind import DeepConvMind
+from core import optimized_minimax
 from learner.conv_mind import ConvMind
 import numpy as np
 from copy import copy
@@ -74,48 +75,6 @@ class TestBoard(unittest.TestCase):
     #     print(possible_moves[0][1])
     #     self.assertAlmostEqual(possible_moves[0][1].principle_variation.q, 1)
     #
-    # def test_consistency(self):
-    #     board = Board(size=5, win_chain_length=4)
-    #
-    #     as_player = 1
-    #     root_node = minimax.PVSNode(parent=None,
-    #                                      is_maximizing=True if as_player == 1 else False,
-    #                                      full_move_list=minimax.MoveList(moves=()))
-    #
-    #     mind = DeepConvMind(size=5, alpha=0)
-    #
-    #     principle_variations = [root_node]
-    #     mind.pvs_batch_q(board, principle_variations)
-    #
-    #     for move in copy(board.available_moves):
-    #         board.hypothetical_move(move[0], move[1])
-    #         vector, player = mind.negamax_feature_vector(board)
-    #         q = mind.est.predict([[vector.reshape(board.size, board.size, 1)], [player]])[0][0]
-    #         self.assertAlmostEqual(q, root_node.children[move[0], move[1]].q, places=5)
-    #         board.unmove()
-    #
-    #     mind.pvs_batch_q(board, root_node.children.values())
-    #
-    #     third_layer = []
-    #     for child in root_node.children.values():
-    #         third_layer.extend(child.children.values())
-    #
-    #     mind.pvs_batch_q(board, third_layer)
-    #
-    #     move_list = [(2, 2), (2, 1), (4, 0)]
-    #
-    #     for move in move_list:
-    #         board.hypothetical_move(move[0], move[1])
-    #
-    #     vector, player = mind.negamax_feature_vector(board)
-    #     q = mind.est.predict([[vector.reshape(board.size, board.size, 1)], [player]])[0][0]
-    #     self.assertAlmostEqual(q, root_node.children[move_list[0][0], move_list[0][1]]
-    #                                         .children[move_list[1][0], move_list[1][1]]
-    #                                         .children[move_list[2][0], move_list[2][1]]
-    #                                         .q, places=5)
-    #
-    #     for i in range(len(move_list)):
-    #         board.unmove()
     #
     #
     # def test_batch(self):
@@ -332,24 +291,52 @@ class TestBoard(unittest.TestCase):
     #
     #     print('pvs', mind.pvs(board, max_iters=50, k=25, max_depth=8))
 
-    def test_win(self):
-        mind = DeepConvMind(size=5, alpha=0.5, turn_input=True)
+    # def test_win(self):
+    #     mind = DeepConvMind(size=5, alpha=0.5, turn_input=True)
+    #
+    #     board = Board(size=5, win_chain_length=4)
+    #
+    #     root_node = minimax.PVSNode(parent=None,
+    #                                 is_maximizing=False,
+    #                                 full_move_list=minimax.MoveList(moves=()))
+    #
+    #
+    #     board.make_move(2, 1)
+    #     board.make_move(2, 3)
+    #     board.make_move(1, 2)
+    #     board.make_move(0, 2)
+    #     board.make_move(0, 3)
+    #     print(board.pprint())
+    #     print(mind.pvs(board, max_iters=25, k=25, max_depth=3))
 
+    def test_compare_minimax(self):
+        mind = DeepConvMind(size=5, alpha=0.5, turn_input=True)
+        mind.load('../models/pq_net_32')
         board = Board(size=5, win_chain_length=4)
 
         root_node = minimax.PVSNode(parent=None,
                                     is_maximizing=False,
                                     full_move_list=minimax.MoveList(moves=()))
 
-        board.make_move(2, 1)
-        board.make_move(2, 3)
-        board.make_move(1, 2)
-        board.make_move(0, 2)
-        board.make_move(0, 3)
-        print(board.pprint())
-        print(mind.pvs(board, max_iters=25, k=25, max_depth=3))
+        principle_variations = [root_node]
+        mind.pvs_batch(board, principle_variations)
+        mind.pvs_batch(board, root_node.children.values())
 
+        opt_root_node = optimized_minimax.PVSNode(parent=None,
+                                    is_maximizing=False,
+                                    full_move_list=minimax.MoveList(moves=()))
 
+        principle_variations = [opt_root_node]
+        mind.pvs_batch(board, principle_variations)
+        mind.pvs_batch(board, opt_root_node.children.values())
+
+        print(root_node)
+        for child in root_node.children.values():
+            print(child)
+
+        print(opt_root_node)
+        for opt_root_node in opt_root_node.children.values():
+            print(opt_root_node)
 
 if __name__ == '__main__':
     unittest.main()

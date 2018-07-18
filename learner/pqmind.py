@@ -5,10 +5,12 @@ from keras.layers import Input, Convolution2D, Dense, Dropout, Flatten, concaten
 from keras.models import Model  # basic class for specifying and training a neural network
 from keras import losses
 import keras
+import tensorflow as tf
+from sortedcontainers import SortedSet
 
 import core.board
 from core.board import GameState
-from core import minimax
+from core import optimized_minimax
 
 random_state = np.random.RandomState(42)
 
@@ -89,28 +91,42 @@ class PQMind:
 
         return model
 
+    # after parents are expanded, this method recomputes all leaves
     def pvs_catch_leaves(self, leaf_nodes, new_parents, max_depth=5):
         for parent in new_parents:
             if parent in leaf_nodes:
                 leaf_nodes.remove(parent)
-            if parent.max_depth < max_depth:
-                leaf_nodes.update(parent.children.values())
+            if len(parent.full_move_list) < max_depth:
+                leaf_nodes.update([node for node in parent.children.values() if node.game_status == GameState.NOT_OVER])
+
+    def pvs_k_principle_variations(self, root_node, leaf_nodes, k=5):
+        # include the best move according to q
+        q_best = root_node.principle_variation
+        # draw
+        if q_best is None:
+            return []
+
+        # include k-1 most likely moves according to p
+        if q_best.game_status == GameState.NOT_OVER:
+            return [q_best] + list(leaf_nodes.islice(0, k - 2))
+        else:
+            return leaf_nodes.islice(0, k - 1)
 
     # board perception AND move turn perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
 
     def pvs_best_moves(self, board, max_iters=10, epsilon=0.01, verbose=True, k=25, max_depth=5):
-        root_node = minimax.PVSNode(parent=None,
+        root_node = optimized_minimax.PVSNode(parent=None,
                                     is_maximizing=True if board.player_to_move == 1 else False,
-                                    full_move_list=minimax.MoveList(moves=()))
+                                    full_move_list=optimized_minimax.MoveList(moves=()))
 
         principle_variations = [root_node]
-        leaf_nodes = set(principle_variations)
+        leaf_nodes = SortedSet(principle_variations, key=lambda x: x.log_total_p)
 
         for i in range(max_iters):
             self.pvs_batch(board, principle_variations)
             self.pvs_catch_leaves(leaf_nodes, principle_variations, max_depth=max_depth)
-            principle_variations = root_node.get_k_principle_variations(leaf_nodes, k=k)
+            principle_variations = self.pvs_k_principle_variations(root_node, leaf_nodes, k=k)
 
             if len(principle_variations) == 0:
                 print("Exhausted Search")
@@ -191,7 +207,6 @@ class PQMind:
                 # if game is over, then we have our q
                 if board.game_won():
                     # the player who last move won!
-                    #print('Game Won', child.full_move_list.moves, -board.player_to_move)
                     if len(child.full_move_list.moves) == 1:
                         print('win now')
                     child.assign_q(-board.player_to_move, core.board.GameState.WON)
@@ -234,8 +249,8 @@ class PQMind:
             q_predictions = np.clip(
                         self.value_est.predict([q_board_vectors, np.array(q_search_player)],
                                                             batch_size=64).reshape(len(q_search_vectors)),
-                        a_max=minimax.TreeNode.MAX_Q - 0.01,
-                        a_min=minimax.TreeNode.MIN_Q + 0.01
+                        a_max=optimized_minimax.PVSNode.MAX_Q - 0.01,
+                        a_min=optimized_minimax.PVSNode.MIN_Q + 0.01
                 )
 
             log_p_predictions = np.log(self.policy_est.predict([p_board_vectors, np.array(p_search_players)],

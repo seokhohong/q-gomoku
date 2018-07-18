@@ -125,24 +125,40 @@ class Board:
             self.player_to_move = Board.FIRST_PLAYER
 
     # returns None if game has not concluded, True if the last move won the game, False if draw
+    # frequently called function, needs to be optimized
     def compute_game_state(self):
         last_move = utils.peek_stack(self.ops)
         if last_move:
             last_x, last_y = last_move.x, last_move.y
-            max_chain = max(
-                self.chain_length(last_x, last_y, -1, 0) + self.chain_length(last_x, last_y, 1, 0),
-                self.chain_length(last_x, last_y, -1, 1) + self.chain_length(last_x, last_y, 1, -1),
-                self.chain_length(last_x, last_y, 1, 1) + self.chain_length(last_x, last_y, -1, -1),
-                self.chain_length(last_x, last_y, 0, 1) + self.chain_length(last_x, last_y, 0, -1),
-            )
-            if max_chain >= self.win_chain_length + 1:
+            if self.chain_length(last_x, last_y, -1, 0) + self.chain_length(last_x, last_y, 1, 0) >= self.win_chain_length + 1\
+                    or self.chain_length(last_x, last_y, -1, 1) + self.chain_length(last_x, last_y, 1, -1) >= self.win_chain_length + 1\
+                    or self.chain_length(last_x, last_y, 1, 1) + self.chain_length(last_x, last_y, -1, -1) >= self.win_chain_length + 1\
+                    or self.chain_length(last_x, last_y, 0, 1) + self.chain_length(last_x, last_y, 0, -1) >= self.win_chain_length + 1:
                 self.game_state = GameState.WON
                 return
-            if self.game_drawn():
+            if len(self.ops) == self.size ** 2:
                 self.game_state = GameState.DRAW
                 return
         self.game_state = GameState.NOT_OVER
         self.state_computed = True
+
+    def in_bounds(self, x, y):
+        return 0 <= x < self.size and 0 <= y < self.size
+
+    def chain_length(self, center_x, center_y, delta_x, delta_y):
+        center_stone = self.matrix[center_x, center_y]
+        if center_stone == Board.NO_PLAYER:
+            return 0
+        chain_length = 1
+        for step in range(1, self.win_chain_length):
+            step_x = delta_x * step
+            step_y = delta_y * step
+            if 0 <= center_x + step_x < self.size and 0 <= center_y + step_y < self.size and \
+                    self.matrix[center_x + step_x, center_y + step_y] == center_stone:
+                chain_length += 1
+            else:
+                break
+        return chain_length
 
     # runs a full compute
     def game_won(self):
@@ -158,24 +174,6 @@ class Board:
         if not self.state_computed:
             self.compute_game_state()
         return self.game_state != GameState.NOT_OVER
-
-    def in_bounds(self, x, y):
-        return x >= 0 and y >= 0 and x < self.size and y < self.size
-
-    def chain_length(self, center_x, center_y, delta_x, delta_y):
-        center_stone = self.matrix[center_x, center_y]
-        if center_stone == Board.NO_PLAYER:
-            return 0
-        chain_length = 0
-        for step in range(self.size):
-            step_x = delta_x * step
-            step_y = delta_y * step
-            if self.in_bounds(center_x + step_x, center_y + step_y) and \
-                    self.matrix[center_x + step_x, center_y + step_y] == center_stone:
-                chain_length += 1
-            else:
-                break
-        return chain_length
 
     def pprint(self):
         def display_char(x, y):
@@ -198,4 +196,7 @@ class Board:
                 board_string += "|" + display_char(j, i)
             board_string += "|"
         return board_string
+
+    def __str__(self):
+        return self.pprint()
 
