@@ -119,4 +119,7 @@ class PVSNode:
             self.parent.recalculate_q()
 
     def __str__(self):
-        return ("PV: " + str(self.principle_variation.full_move_list.moves) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.log_total_p)
+        if self.principle_variation:
+            return ("PV: " + str(self.principle_variation.full_move_list.moves) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.log_total_p)
+        else:
+            return "Position: " + str(self.full_move_list.moves)

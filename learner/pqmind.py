@@ -49,11 +49,11 @@ class PQMind:
     def get_layers(self):
         inp = Input(shape=(self.size, self.size, 1))
 
-        bn1 = BatchNormalization()(inp)
+        #bn1 = BatchNormalization()(inp)
         # key difference between this and conv network is padding
         conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_uniform')(bn1)
-        bn2 = BatchNormalization()(conv_1)
+                               kernel_initializer='random_uniform')(inp)
+        #bn2 = BatchNormalization()(conv_1)
         #conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
         ##                       kernel_initializer='random_uniform')(bn2)
         #bn3 = BatchNormalization()(conv_2)
@@ -61,14 +61,14 @@ class PQMind:
         #                       kernel_initializer='random_uniform')(bn3)
         #bn4 = BatchNormalization()(conv_3)
 
-        flat = Flatten()(bn2)
+        flat = Flatten()(conv_1)
         turn_input = Input(shape=(1,), name='turn')
         full = concatenate([flat, turn_input])
 
         hidden = Dense(15, activation='relu', kernel_initializer='random_uniform')(full)
-        bn4 = BatchNormalization()(hidden)
+        #bn4 = BatchNormalization()(hidden)
 
-        return inp, turn_input, bn4
+        return inp, turn_input, hidden
 
     def get_value_model(self):
         inp, turn_input, hidden = self.get_layers()
@@ -128,7 +128,7 @@ class PQMind:
             self.pvs_catch_leaves(leaf_nodes, principle_variations, max_depth=max_depth)
             principle_variations = self.pvs_k_principle_variations(root_node, leaf_nodes, k=k)
 
-            if principle_variations:
+            if not principle_variations:
                 print("Exhausted Search")
                 break
 
