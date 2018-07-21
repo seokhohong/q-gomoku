@@ -48,23 +48,22 @@ class PQMind:
     def get_layers(self):
         inp = Input(shape=(self.size, self.size, 1))
 
-        bn1 = BatchNormalization()(inp)
         # key difference between this and conv network is padding
         conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='zeros')(bn1)
+                               kernel_initializer='random_normal')(inp)
         bn2 = BatchNormalization()(conv_1)
         conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='zeros')(bn2)
+                               kernel_initializer='random_normal')(bn2)
         bn3 = BatchNormalization()(conv_2)
         conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='zeros')(bn3)
+                               kernel_initializer='random_normal')(bn3)
         bn4 = BatchNormalization()(conv_3)
 
         flat = Flatten()(bn4)
         turn_input = Input(shape=(1,), name='turn')
         full = concatenate([flat, turn_input])
 
-        hidden = Dense(30, activation='relu', kernel_initializer='zeros')(full)
+        hidden = Dense(30, activation='relu', kernel_initializer='random_normal')(full)
         bn5 = BatchNormalization()(hidden)
 
         return inp, turn_input, bn5
