@@ -48,26 +48,26 @@ class PQMind:
     def get_layers(self):
         inp = Input(shape=(self.size, self.size, 1))
 
-        #bn1 = BatchNormalization()(inp)
+        bn1 = BatchNormalization()(inp)
         # key difference between this and conv network is padding
         conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_uniform')(inp)
-        #bn2 = BatchNormalization()(conv_1)
-        #conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-        ##                       kernel_initializer='random_uniform')(bn2)
-        #bn3 = BatchNormalization()(conv_2)
-        #conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-        #                       kernel_initializer='random_uniform')(bn3)
-        #bn4 = BatchNormalization()(conv_3)
+                               kernel_initializer='zeros')(bn1)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='zeros')(bn2)
+        bn3 = BatchNormalization()(conv_2)
+        conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='zeros')(bn3)
+        bn4 = BatchNormalization()(conv_3)
 
-        flat = Flatten()(conv_1)
+        flat = Flatten()(bn4)
         turn_input = Input(shape=(1,), name='turn')
         full = concatenate([flat, turn_input])
 
-        hidden = Dense(15, activation='relu', kernel_initializer='random_uniform')(full)
-        #bn4 = BatchNormalization()(hidden)
+        hidden = Dense(30, activation='relu', kernel_initializer='zeros')(full)
+        bn5 = BatchNormalization()(hidden)
 
-        return inp, turn_input, hidden
+        return inp, turn_input, bn5
 
     def get_value_model(self):
         inp, turn_input, hidden = self.get_layers()
@@ -208,10 +208,10 @@ class PQMind:
                     # the player who last move won!
                     if len(child.full_move_list.moves) == 1:
                         print('win now')
-                    child.assign_q(-board.player_to_move, core.board.GameState.WON)
+                    child.assign_q(-board.player_to_move, GameState.WON)
 
                 elif board.game_drawn():
-                    child.assign_q(0, core.board.GameState.DRAW)
+                    child.assign_q(0, GameState.DRAW)
 
                 else:
                     q_search_nodes.append(child)
@@ -287,7 +287,12 @@ class PQMind:
                                 max_iters=max_iters,
                                 k=k)
 
-        new_q = (1 - self.alpha) * current_q + self.alpha * best_q
+        # ignore learning rate if outcome is guaranteed
+        if abs(best_q) > 0.99:
+            new_q = best_q
+        else:
+            new_q = (1 - self.alpha) * current_q + self.alpha * best_q
+            
         print(current_q, best_q)
         self.add_train_example(board, as_player, new_q, move)
 
