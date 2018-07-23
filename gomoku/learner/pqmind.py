@@ -117,13 +117,12 @@ class PQMind:
                                     full_move_list=optimized_minimax.MoveList(moves=()))
 
         principle_variations = [root_node]
-        leaf_nodes = SortedSet(principle_variations, key=lambda x: x.log_total_p)
+        leaf_nodes = SortedSet(principle_variations, key=lambda x: -x.log_total_p)
 
         for i in range(max_iters):
             self.pvs_batch(board, principle_variations)
             self.pvs_catch_leaves(leaf_nodes, principle_variations, max_depth=max_depth)
             principle_variations = self.pvs_k_principle_variations(root_node, leaf_nodes, k=k)
-            print('Expanding', len(list(principle_variations)))
             if not principle_variations:
                 print("Exhausted Search")
                 break
@@ -172,7 +171,10 @@ class PQMind:
 
     def pvs_batch(self, board, nodes_to_expand):
 
+        print(' ')
         for parent in nodes_to_expand:
+
+            print('Expanding', parent.log_total_p)
             for move in parent.full_move_list.moves:
                 board.move(move[0], move[1])
 
