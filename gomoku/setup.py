@@ -8,5 +8,5 @@ setup(
     python_requires=">3",
     install_requires=[],
     include_package_data=True,
-    packages=['core', 'learner', 'main', 'util'],
+    packages=["core", 'main', 'learner', 'util'],
 )

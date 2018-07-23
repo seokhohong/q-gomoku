@@ -4,7 +4,7 @@ from collections import defaultdict
 import numpy as np
 import random
 
-from gomoku.util import utils
+from util import utils
 
 class Move:
     def __init__(self, player, x, y):

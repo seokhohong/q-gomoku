@@ -8,8 +8,8 @@ import keras
 import tensorflow as tf
 from sortedcontainers import SortedSet
 
-from gomoku.core.board import GameState
-from gomoku.core import optimized_minimax
+from core.board import GameState
+from core import optimized_minimax
 
 random_state = np.random.RandomState(42)
 

@@ -1,6 +1,6 @@
 import numpy as np
 
-from gomoku.core.board import GameState
+from core.board import GameState
 
 
 class MoveList:
