@@ -92,7 +92,8 @@ class PQMind:
         for parent in new_parents:
             if parent in leaf_nodes:
                 leaf_nodes.remove(parent)
-            if len(parent.full_move_list) < max_depth:
+            # if parent is not too deep and isn't a game ending state
+            if len(parent.full_move_list) < max_depth and abs(parent.q) < 1:
                 leaf_nodes.update([node for node in parent.children.values() if node.game_status == GameState.NOT_OVER])
 
     def pvs_k_principle_variations(self, root_node, leaf_nodes, k=5):
@@ -106,7 +107,7 @@ class PQMind:
         if q_best.game_status == GameState.NOT_OVER:
             return [q_best] + list(leaf_nodes.islice(0, k - 2))
         else:
-            return leaf_nodes.islice(0, k - 1)
+            return list(leaf_nodes.islice(0, k - 1))
 
     # board perception AND move turn perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
@@ -171,10 +172,7 @@ class PQMind:
 
     def pvs_batch(self, board, nodes_to_expand):
 
-        print(' ')
         for parent in nodes_to_expand:
-
-            print('Expanding', parent.log_total_p)
             for move in parent.full_move_list.moves:
                 board.move(move[0], move[1])
 
