@@ -17,20 +17,23 @@ MIN_Q = -1
 MAX_Q = 1
 
 class PQMind:
-    def __init__(self, size, alpha, turn_input=True, init=True):
+    def __init__(self, size, alpha, init=True, channels=1):
 
         self.size = size
+        self.channels = channels
 
         self.value_est = self.get_value_model()
         self.policy_est = self.get_policy_model()
 
+
         # initialization
         init_examples = 10
 
+        #from keras import backend as K
+        #K.set_session(K.tf.Session(config=K.tf.ConfigProto(intra_op_parallelism_threads=4, inter_op_parallelism_threads=4)))
         if init:
             sample_x = [
-                                    random_state.random_integers(-1, 1, size=(init_examples, size, size, 1)),
-                                    random_state.random_integers(-1, 1, size=(init_examples)).reshape(init_examples, -1),
+                                    random_state.random_integers(-1, 1, size=(init_examples, size, size, self.channels))
                                 ]
             self.value_est.fit(sample_x, y=np.zeros((init_examples)), epochs=1, batch_size=100)
             self.policy_est.fit(sample_x, y=np.zeros((init_examples, self.size ** 2)))
@@ -41,50 +44,45 @@ class PQMind:
 
         self.fitted = False
 
-        self.turn_input = turn_input
-
         self.alpha = alpha
 
     def get_layers(self):
-        inp = Input(shape=(self.size, self.size, 1))
+        inp = Input(shape=(self.size, self.size, self.channels))
 
         # key difference between this and conv network is padding
         conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_normal')(inp)
+                               kernel_initializer='random_normal', use_bias=False)(inp)
         bn2 = BatchNormalization()(conv_1)
         conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_normal')(bn2)
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
         bn3 = BatchNormalization()(conv_2)
         conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_normal')(bn3)
+                               kernel_initializer='random_normal', use_bias=False)(bn3)
         bn4 = BatchNormalization()(conv_3)
 
         flat = Flatten()(bn4)
-        turn_input = Input(shape=(1,), name='turn')
-        full = concatenate([flat, turn_input])
 
-        hidden = Dense(30, activation='relu', kernel_initializer='random_normal')(full)
+        hidden = Dense(30, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
         bn5 = BatchNormalization()(hidden)
 
-        return inp, turn_input, bn5
+        return inp, bn5
 
     def get_value_model(self):
-        inp, turn_input, hidden = self.get_layers()
+        inp, hidden = self.get_layers()
 
-        out = Dense(1)(hidden)
+        out = Dense(1, use_bias=False)(hidden)
 
-        model = Model(inputs=[inp, turn_input], outputs=out)
+        model = Model(inputs=[inp], outputs=out)
         model.compile(loss=losses.mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
 
         return model
 
     def get_policy_model(self):
-        inp, turn_input, hidden = self.get_layers()
-
+        inp, hidden = self.get_layers()
 
         out = Dense(self.size ** 2, activation='softmax')(hidden)
 
-        model = Model(inputs=[inp, turn_input], outputs=out)
+        model = Model(inputs=[inp], outputs=out)
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         return model
@@ -125,7 +123,7 @@ class PQMind:
             self.pvs_batch(board, principle_variations)
             self.pvs_catch_leaves(leaf_nodes, principle_variations, max_depth=max_depth)
             principle_variations = self.pvs_k_principle_variations(root_node, leaf_nodes, k=k)
-
+            print('Expanding', len(list(principle_variations)))
             if not principle_variations:
                 print("Exhausted Search")
                 break
@@ -176,7 +174,7 @@ class PQMind:
 
         for parent in nodes_to_expand:
             for move in parent.full_move_list.moves:
-                board.hypothetical_move(move[0], move[1])
+                board.move(move[0], move[1])
 
             if board.game_won():
                 print('game over??!')
@@ -197,11 +195,11 @@ class PQMind:
         for parent in nodes_to_expand:
             # for each move except the last, make rapid moves on board
             for move in parent.full_move_list.moves:
-                board.hypothetical_move(move[0], move[1])
+                board.move(move[0], move[1])
 
             for child_move in copy.copy(board.available_moves):
                 child = parent.create_child(child_move)
-                board.hypothetical_move(child_move[0], child_move[1])
+                board.move(child_move[0], child_move[1])
                 # if game is over, then we have our q
                 if board.game_won():
                     # the player who last move won!
@@ -238,21 +236,20 @@ class PQMind:
                 parent.recalculate_q()
             return False
 
-        q_board_vectors = np.array(q_search_vectors).reshape(len(q_search_vectors), self.size, self.size, 1)
-        p_board_vectors = np.array(p_search_vectors).reshape(len(p_search_vectors), self.size, self.size, 1)
+        q_board_vectors = np.array(q_search_vectors).reshape(len(q_search_vectors), self.size, self.size, self.channels)
+        p_board_vectors = np.array(p_search_vectors).reshape(len(p_search_vectors), self.size, self.size, self.channels)
 
-        with tf.device('/gpu:1'):
-            # this helps parallelize
-            # multiplication is needed to flip the Q (adjust perspective)
-            q_predictions = np.clip(
-                        self.value_est.predict([q_board_vectors, np.array(q_search_player)],
-                                                            batch_size=64).reshape(len(q_search_vectors)),
-                        a_max=optimized_minimax.PVSNode.MAX_Q - 0.01,
-                        a_min=optimized_minimax.PVSNode.MIN_Q + 0.01
-                )
+        # this helps parallelize
+        # multiplication is needed to flip the Q (adjust perspective)
+        q_predictions = np.clip(
+                    self.value_est.predict([q_board_vectors],
+                                                        batch_size=64).reshape(len(q_search_vectors)),
+                    a_max=optimized_minimax.PVSNode.MAX_Q - 0.01,
+                    a_min=optimized_minimax.PVSNode.MIN_Q + 0.01
+            )
 
-            log_p_predictions = np.log(self.policy_est.predict([p_board_vectors, np.array(p_search_players)],
-                                                            batch_size=64).reshape((len(p_search_vectors), self.size ** 2)))
+        log_p_predictions = np.log(self.policy_est.predict([p_board_vectors],
+                                                        batch_size=64).reshape((len(p_search_vectors), self.size ** 2)))
 
         for i, parent in enumerate(nodes_to_expand):
             for move in parent.children.keys():
@@ -270,7 +267,7 @@ class PQMind:
         return True
 
     def q(self, board, as_player):
-        prediction = self.value_est.predict([np.array([board.get_matrix(as_player).reshape(board.size, board.size, -1)]), np.array([as_player])])[0][0]
+        prediction = self.value_est.predict([np.array([board.get_matrix(as_player).reshape(board.size, board.size, -1)])])[0][0]
         return prediction
 
     # with epsilon probability will select random move
@@ -295,7 +292,7 @@ class PQMind:
         print(current_q, best_q)
         self.add_train_example(board, as_player, new_q, move)
 
-        board.make_move(move[0], move[1])
+        board.move(move[0], move[1])
 
         if board.game_over():
             if retrain:

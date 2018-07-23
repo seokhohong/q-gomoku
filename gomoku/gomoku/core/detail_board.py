@@ -93,7 +93,7 @@ class Board:
 
         matrix = -np.copy(self.matrix)
 
-        return np.concatenate((matrix, np.copy(self.chain_matrix).reshape(7, 7, 1)), axis=2)
+        return np.concatenate((matrix, np.copy(self.chain_matrix).reshape(self.size, self.size, 1)), axis=2)
 
 
     def get_rotated_matrices(self, as_player):
