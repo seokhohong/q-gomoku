@@ -4,11 +4,7 @@ from collections import defaultdict
 import numpy as np
 import random
 
-def peek_stack(list):
-    if len(list) == 0:
-        return None
-    else:
-        return list[-1]
+from util import utils
 
 class Move:
     def __init__(self, player, x, y):
@@ -28,6 +24,7 @@ class Board:
     FIRST_PLAYER = 1
     SECOND_PLAYER = -1
 
+    CHAIN_DIRECTIONS = 4
     def __init__(self, size=5, win_chain_length=3):
         self.size = size
         # three channels
@@ -49,7 +46,7 @@ class Board:
 
         # memory of how each move changed the chain lengths
         self.chain_length_memory = []
-        self.chain_matrix = np.zeros((self.size, self.size))
+        self.chain_matrix = np.zeros((self.size, self.size, Board.CHAIN_DIRECTIONS))
         self.chain_matrix.fill(Board.NO_PLAYER)
 
         # whether current game_state is accurate
@@ -93,7 +90,7 @@ class Board:
 
         matrix = -np.copy(self.matrix)
 
-        return np.concatenate((matrix, np.copy(self.chain_matrix).reshape(self.size, self.size, 1)), axis=2)
+        return np.concatenate((matrix, np.copy(self.chain_matrix).reshape(self.size, self.size, Board.CHAIN_DIRECTIONS)), axis=2)
 
 
     def get_rotated_matrices(self, as_player):
@@ -144,14 +141,14 @@ class Board:
     # returns None if game has not concluded, True if the last move won the game, False if draw
     # frequently called function, needs to be optimized
     def compute_game_state(self):
-        last_move = peek_stack(self.ops)
+        last_move = utils.peek_stack(self.ops)
         if last_move:
             last_x, last_y = last_move.x, last_move.y
             # check win
-            if self.chain_length(last_x, last_y, -1, 0, last_move.player) >= self.win_chain_length\
-                    or self.chain_length(last_x, last_y, -1, 1, last_move.player) >= self.win_chain_length \
-                    or self.chain_length(last_x, last_y, 1, 1, last_move.player) >= self.win_chain_length \
-                    or self.chain_length(last_x, last_y, 0, 1, last_move.player) >= self.win_chain_length:
+            if self.chain_length(last_x, last_y, -1, 0, last_move.player, 0) >= self.win_chain_length\
+                    or self.chain_length(last_x, last_y, -1, 1, last_move.player, 1) >= self.win_chain_length \
+                    or self.chain_length(last_x, last_y, 1, 1, last_move.player, 2) >= self.win_chain_length \
+                    or self.chain_length(last_x, last_y, 0, 1, last_move.player, 3) >= self.win_chain_length:
                     self.game_state = GameState.WON
                     return
             if len(self.ops) == self.size ** 2:
@@ -164,7 +161,7 @@ class Board:
         return 0 <= x < self.size and 0 <= y < self.size
 
     # does both directions
-    def chain_length(self, center_x, center_y, delta_x, delta_y, center_stone):
+    def chain_length(self, center_x, center_y, delta_x, delta_y, center_stone, direction):
         # other spots other than center that are part of the chain
         chain_positions = [(center_x, center_y)]
         if center_stone == Board.NO_PLAYER:
@@ -191,8 +188,8 @@ class Board:
                 break
 
         for x, y in chain_positions:
-            if chain_length > self.chain_matrix[x, y]:
-                self.chain_matrix[x, y] = chain_length
+            if chain_length > self.chain_matrix[x, y, direction]:
+                self.chain_matrix[x, y, direction] = chain_length
 
         return chain_length
 
@@ -214,7 +211,7 @@ class Board:
 
     def pprint(self):
         def display_char(x, y):
-            move = peek_stack(self.ops)
+            move = utils.peek_stack(self.ops)
             if move:
                 was_last_move = (x == move.x and y == move.y)
                 if self.matrix[x, y, Board.FIRST_PLAYER] == 1:
