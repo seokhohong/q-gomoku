@@ -46,31 +46,29 @@ class PQMind:
 
         self.alpha = alpha
 
-    def get_layers(self):
+    def get_value_model(self):
         inp = Input(shape=(self.size, self.size, self.channels))
 
         # key difference between this and conv network is padding
-        conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+        conv_1 = Convolution2D(128, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(inp)
         bn2 = BatchNormalization()(conv_1)
         conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn2)
         bn3 = BatchNormalization()(conv_2)
-        conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+        conv_3 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn3)
         bn4 = BatchNormalization()(conv_3)
+        conv_4 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn4)
+        bn5 = BatchNormalization()(conv_4)
 
-        flat = Flatten()(bn4)
+        flat = Flatten()(bn5)
 
-        hidden = Dense(30, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
-        bn5 = BatchNormalization()(hidden)
+        hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        bn_final = BatchNormalization()(hidden)
 
-        return inp, bn5
-
-    def get_value_model(self):
-        inp, hidden = self.get_layers()
-
-        out = Dense(1, use_bias=False)(hidden)
+        out = Dense(1, use_bias=False)(bn_final)
 
         model = Model(inputs=[inp], outputs=out)
         model.compile(loss=losses.mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
@@ -78,9 +76,28 @@ class PQMind:
         return model
 
     def get_policy_model(self):
-        inp, hidden = self.get_layers()
+        inp = Input(shape=(self.size, self.size, self.channels))
 
-        out = Dense(self.size ** 2, activation='softmax')(hidden)
+        # key difference between this and conv network is padding
+        conv_1 = Convolution2D(128, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(inp)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
+        bn3 = BatchNormalization()(conv_2)
+        conv_3 = Convolution2D(32, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn3)
+        bn4 = BatchNormalization()(conv_3)
+        conv_4 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn4)
+        bn5 = BatchNormalization()(conv_4)
+
+        flat = Flatten()(bn5)
+
+        hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        bn_final = BatchNormalization()(hidden)
+
+        out = Dense(self.size ** 2, activation='softmax')(bn_final)
 
         model = Model(inputs=[inp], outputs=out)
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
@@ -105,9 +122,9 @@ class PQMind:
 
         # include k-1 most likely moves according to p
         if q_best.game_status == GameState.NOT_OVER:
-            return [q_best] + list(leaf_nodes.islice(0, k - 2))
+            return [q_best] + list(leaf_nodes.islice(0, k - 1))
         else:
-            return list(leaf_nodes.islice(0, k - 1))
+            return list(leaf_nodes.islice(0, k))
 
     # board perception AND move turn perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
@@ -243,13 +260,13 @@ class PQMind:
         # multiplication is needed to flip the Q (adjust perspective)
         q_predictions = np.clip(
                     self.value_est.predict([q_board_vectors],
-                                                        batch_size=64).reshape(len(q_search_vectors)),
+                                                        batch_size=len(q_board_vectors)).reshape(len(q_search_vectors)),
                     a_max=optimized_minimax.PVSNode.MAX_Q - 0.01,
                     a_min=optimized_minimax.PVSNode.MIN_Q + 0.01
             )
 
         log_p_predictions = np.log(self.policy_est.predict([p_board_vectors],
-                                                        batch_size=64).reshape((len(p_search_vectors), self.size ** 2)))
+                                                        batch_size=len(q_board_vectors)).reshape((len(p_search_vectors), self.size ** 2)))
 
         for i, parent in enumerate(nodes_to_expand):
             for move in parent.children.keys():

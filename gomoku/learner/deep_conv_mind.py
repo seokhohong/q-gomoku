@@ -232,13 +232,13 @@ class DeepConvMind:
         # multiplication is needed to flip the Q (adjust perspective)
         q_predictions = np.clip(
                     self.value_est.predict([q_board_vectors, np.array(q_search_player)],
-                                                        batch_size=32).reshape(len(q_search_vectors)),
+                                                        batch_size=len(q_board_vectors)).reshape(len(q_search_vectors)),
                     a_max=minimax.TreeNode.MAX_Q - 0.01,
                     a_min=minimax.TreeNode.MIN_Q + 0.01
             )
 
         log_p_predictions = np.log(self.policy_est.predict([p_board_vectors, np.array(p_search_players)],
-                                                        batch_size=32).reshape((len(p_search_vectors), self.size ** 2)))
+                                                        batch_size=len(q_board_vectors)).reshape((len(p_search_vectors), self.size ** 2)))
 
         for i, parent in enumerate(nodes_to_expand):
             for move in parent.children.keys():
