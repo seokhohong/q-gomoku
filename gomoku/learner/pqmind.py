@@ -50,10 +50,10 @@ class PQMind:
         inp = Input(shape=(self.size, self.size, self.channels))
 
         # key difference between this and conv network is padding
-        conv_1 = Convolution2D(128, (3, 3), padding='same', activation='relu',
+        conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(inp)
         bn2 = BatchNormalization()(conv_1)
-        conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+        conv_2 = Convolution2D(32, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn2)
         bn3 = BatchNormalization()(conv_2)
         conv_3 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
@@ -88,7 +88,7 @@ class PQMind:
         conv_3 = Convolution2D(32, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn3)
         bn4 = BatchNormalization()(conv_3)
-        conv_4 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
+        conv_4 = Convolution2D(16, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn4)
         bn5 = BatchNormalization()(conv_4)
 
