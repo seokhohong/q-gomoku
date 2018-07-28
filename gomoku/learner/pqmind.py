@@ -301,7 +301,7 @@ class PQMind:
                                 k=k)
 
         # ignore learning rate if outcome is guaranteed
-        if abs(best_q) > 0.99:
+        if abs(best_q) > optimized_minimax.PVSNode.MAX_MODEL_Q:
             new_q = best_q
         else:
             new_q = (1 - self.alpha) * current_q + self.alpha * best_q

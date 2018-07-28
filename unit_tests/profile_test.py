@@ -1,17 +1,18 @@
 import cProfile
 
 
-from core.board import Board
-from core import minimax
+from core.detail_board import Board
 from learner.pqmind import PQMind
 
 
+SIZE = 7
+
 def run():
-    mind = PQMind(size=13, alpha=0.5, turn_input=True)
+    mind = PQMind(size=SIZE, alpha=0.5, init=True, channels=19)
 
-    board = Board(size=13, win_chain_length=5)
+    board = Board(size=SIZE, win_chain_length=5)
 
-    mind.pvs(board, max_iters=25, k=100, max_depth=3)
+    mind.pvs(board, max_iters=10, k=SIZE ** 2, max_depth=25)
 
 if __name__ == "__main__":
     import cProfile, pstats

@@ -117,7 +117,7 @@ class Board:
         if as_player == Board.FIRST_PLAYER:
             matrix = np.copy(self.matrix)
 
-        matrix = -np.copy(self.matrix)
+        matrix = np.stack((self.matrix[:, :, 0], self.matrix[:, :, 2], self.matrix[:, :, 1]), axis=2)
 
         # stack the two chain matrices so that index [:, :, 0, :] is self and [:, :, 1, :] is other
         if as_player == Board.FIRST_PLAYER:
@@ -320,6 +320,30 @@ class Board:
         board_string = ""
         for i in range(0, self.size):
             board_string += "\n"
+            for j in range(self.size):
+                board_string += "|" + display_char(j, i)
+            board_string += "|"
+        return board_string
+
+    def guide_print(self):
+        def display_char(x, y):
+            move = utils.peek_stack(self.ops)
+            if move:
+                was_last_move = (x == move.x and y == move.y)
+                if self.matrix[x, y, Board.FIRST_PLAYER] == 1:
+                    if was_last_move:
+                        return 'X'
+                    return 'x'
+                elif self.matrix[x, y, Board.SECOND_PLAYER] == 1:
+                    if was_last_move:
+                        return 'O'
+                    return 'o'
+            return ' '
+        board_string = " "
+        for i in range(0, self.size):
+            board_string += " " + str(i)
+        for i in range(0, self.size):
+            board_string += "\n" + str(i)
             for j in range(self.size):
                 board_string += "|" + display_char(j, i)
             board_string += "|"

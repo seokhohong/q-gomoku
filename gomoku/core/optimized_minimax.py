@@ -25,7 +25,10 @@ class MoveList:
 # principle value search
 class PVSNode:
     MAX_Q = 1
+    # largest Q allowed by model prediction (MAX_Q is a minimax certified win)
+    MAX_MODEL_Q = 0.99
     MIN_Q = -1
+    MIN_MODEL_Q = -0.99
 
     def __init__(self, parent, is_maximizing, full_move_list):
 
