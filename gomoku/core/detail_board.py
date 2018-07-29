@@ -112,26 +112,17 @@ class Board:
         self.game_state = GameState.NOT_OVER
 
     # +1 for self, -1 for other
-    def get_matrix(self, as_player):
-
-        if as_player == Board.FIRST_PLAYER:
-            matrix = np.copy(self.matrix)
-
-        matrix = np.stack((self.matrix[:, :, 0], self.matrix[:, :, 2], self.matrix[:, :, 1]), axis=2)
-
-        # stack the two chain matrices so that index [:, :, 0, :] is self and [:, :, 1, :] is other
-        if as_player == Board.FIRST_PLAYER:
-            chains = np.concatenate((self.chain_matrix[:, :, 0, :], self.chain_matrix[:, :, 1, :]), axis=2)
-            blocked = np.concatenate((self.chain_block_matrix[:, :, 0, :], self.chain_block_matrix[:, :, 1, :]), axis=2)
-        else:
-            chains = np.concatenate((self.chain_matrix[:, :, 1, :], self.chain_matrix[:, :, 0, :]), axis=2)
-            blocked = np.concatenate((self.chain_block_matrix[:, :, 1, :], self.chain_block_matrix[:, :, 0, :]), axis=2)
-
-        return np.concatenate((matrix, chains, blocked), axis=2)
+    def get_matrix(self):
+        turn_matrix = np.zeros((self.size, self.size, 1))
+        turn_matrix.fill(self.player_to_move)
+        return np.concatenate((self.matrix,
+                               self.chain_matrix.reshape(self.size, self.size, -1),
+                               self.chain_block_matrix.reshape(self.size, self.size, -1),
+                               turn_matrix), axis=2)
 
 
     def get_rotated_matrices(self, as_player):
-        matrix = self.get_matrix(as_player)
+        matrix = self.get_matrix()
         return [
             matrix,
             matrix.transpose(),

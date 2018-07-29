@@ -331,7 +331,7 @@ class PQMind:
 
     # adds rotations
     def add_train_example(self, board, as_player, result, move, invert_board=False):
-        board_vectors = board.get_rotated_matrices(as_player=as_player)
+        board_vectors = board.get_rotated_matrices(as_player=1)
 
         for i, vector in enumerate(board_vectors):
             clamped_result = max(min(result, MAX_Q), MIN_Q)

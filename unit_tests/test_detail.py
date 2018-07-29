@@ -1,5 +1,6 @@
 from core.detail_board import Board
 import numpy as np
+import random
 
 board = Board(size=5, win_chain_length=4)
 board.move(2, 2)
@@ -63,14 +64,25 @@ assert(board.chain_block_matrix[4, 3, 0, board.directions['VERTICAL'].index] == 
 
 assert(board.chain_block_matrix[3, 3, 0, board.directions['BACKSLASH'].index] == 0)
 
-print(board.get_matrix(1).shape)
+print(board.get_matrix().shape)
 
-for i in range(50):
+for i in range(100):
     board = Board(size=7, win_chain_length=5)
     while True:
+        num_steps = random.randint(0, 10)
         board.make_random_move()
+        steps_taken = 0
+        for j in range(num_steps):
+            if not board.game_over():
+                board.make_random_move()
+                steps_taken += 1
+        for j in range(steps_taken):
+            board.unmove()
         if board.game_won():
             assert(np.max(board.chain_matrix) >= 5)
+            #assert(np.max(board.get_matrix()[:, :, 7: 11]) >= 5)
+            #assert(np.max(board.chain_matrix[:, :, 0, :]) >= 5)
+            #assert(np.max(board.chain_matrix[:, :, 0, :]) < 5)
             break
         elif board.game_drawn():
             print('draw')
