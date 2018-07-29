@@ -123,8 +123,8 @@ class PVSNode:
 
     @classmethod
     # whether the q is from a game result (as opposed to an approximation of game state)
-    def is_result_q(cls, q):
-        return abs(q) > PVSNode.MAX_MODEL_Q or abs(q) < 1E-7
+    def is_result_q(cls, q, epsilon=1E-7):
+        return abs(q) > PVSNode.MAX_Q - epsilon or abs(q) < epsilon
 
     def __str__(self):
         if self.principle_variation:
