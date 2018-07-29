@@ -13,7 +13,7 @@ from core import optimized_minimax
 
 random_state = np.random.RandomState(42)
 
-MIN_MODEL = -1
+MIN_Q = -1
 MAX_Q = 1
 
 class PQMind:
