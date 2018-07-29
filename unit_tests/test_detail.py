@@ -66,7 +66,7 @@ assert(board.chain_block_matrix[3, 3, 0, board.directions['BACKSLASH'].index] ==
 
 print(board.get_matrix().shape)
 
-for i in range(100):
+for i in range(10):
     board = Board(size=7, win_chain_length=5)
     while True:
         num_steps = random.randint(0, 10)
@@ -87,3 +87,10 @@ for i in range(100):
         elif board.game_drawn():
             print('draw')
             break
+
+# check proper transposition
+rotated_matrices = board.get_rotated_matrices()
+
+for rot in rotated_matrices:
+    for i in range(3):
+        assert(np.sum(rot[:, :, i]) == np.sum(board.get_matrix()[:, :, i]))

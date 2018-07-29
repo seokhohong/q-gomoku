@@ -122,16 +122,17 @@ class Board:
 
 
     def get_rotated_matrices(self):
+        transposition_axes = (1, 0, 2)
         matrix = self.get_matrix()
         return [
             matrix,
-            matrix.transpose(),
+            np.transpose(matrix, axes=transposition_axes),
             np.rot90(matrix),
-            np.rot90(matrix).transpose(),
+            np.transpose(np.rot90(matrix), axes=transposition_axes),
             np.rot90(matrix, 2),
-            np.rot90(matrix, 2).transpose(),
+            np.transpose(np.rot90(matrix, 2), axes=transposition_axes),
             np.rot90(matrix, 3),
-            np.rot90(matrix, 3).transpose()
+            np.transpose(np.rot90(matrix, 3), axes=transposition_axes)
         ]
 
     def cache_rotations(self):
