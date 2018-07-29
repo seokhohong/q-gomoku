@@ -32,7 +32,7 @@ def iter_function(i):
         return 20
 
 def run():
-    mind = pqmind.PQMind(size=SIZE, alpha=0.2, init=True, channels=7)
+    mind = pqmind.PQMind(size=SIZE, alpha=0.2, init=True, channels=20)
     #mind.load('../models/pq_r1')
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
@@ -57,7 +57,6 @@ def run():
         while True:
             result = mind.make_move(round_board,
                                     as_player=current_player,
-                                    retrain=True,
                                     epsilon=0.1,
                                     max_depth=depth_function(i),
                                     k=SIZE ** 2,
