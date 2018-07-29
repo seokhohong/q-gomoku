@@ -55,15 +55,15 @@ class PQMind:
         bn2 = BatchNormalization()(conv_1)
         conv_2 = Convolution2D(32, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn2)
-        bn3 = BatchNormalization()(conv_2)
-        conv_3 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
-                               kernel_initializer='random_normal', use_bias=False)(bn3)
-        bn4 = BatchNormalization()(conv_3)
-        conv_4 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
-                               kernel_initializer='random_normal', use_bias=False)(bn4)
-        bn5 = BatchNormalization()(conv_4)
+        #bn3 = BatchNormalization()(conv_2)
+        #conv_3 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
+        #                       kernel_initializer='random_normal', use_bias=False)(bn3)
+        #bn4 = BatchNormalization()(conv_3)
+        #conv_4 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
+        #                       kernel_initializer='random_normal', use_bias=False)(bn4)
+        #bn5 = BatchNormalization()(conv_4)
 
-        flat = Flatten()(bn5)
+        flat = Flatten()(bn2)
 
         hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
         bn_final = BatchNormalization()(hidden)
@@ -229,7 +229,7 @@ class PQMind:
 
                 else:
                     q_search_nodes.append(child)
-                    vector, player = board.get_matrix(), board.player_to_move
+                    vector, player = board.get_matrix(as_player=board.player_to_move), board.player_to_move
                     q_search_vectors.append(vector)
                     q_search_player.append(player)
 
@@ -237,7 +237,7 @@ class PQMind:
                 board.unmove()
 
             # update p
-            vector, player = board.get_matrix(), board.player_to_move
+            vector, player = board.get_matrix(as_player=board.player_to_move), board.player_to_move
             p_search_vectors.append(vector)
             p_search_players.append(player)
 
@@ -284,7 +284,7 @@ class PQMind:
         return True
 
     def q(self, board, as_player):
-        prediction = self.value_est.predict([np.array([board.get_matrix().reshape(board.size, board.size, -1)])])[0][0]
+        prediction = self.value_est.predict([np.array([board.get_matrix(as_player).reshape(board.size, board.size, -1)])])[0][0]
         return prediction
 
     # with epsilon probability will select random move
@@ -331,7 +331,7 @@ class PQMind:
 
     # adds rotations
     def add_train_example(self, board, as_player, result, move, invert_board=False):
-        board_vectors = board.get_rotated_matrices(as_player=1)
+        board_vectors = board.get_rotated_matrices(as_player=as_player)
 
         for i, vector in enumerate(board_vectors):
             clamped_result = max(min(result, MAX_Q), MIN_Q)

@@ -1,0 +1,182 @@
+#!/usr/bin/env bash
+
+# //////////////////////////////////////////////////////////////////////////////
+# ATTENTION
+# //////////////////////////////////////////////////////////////////////////////
+#
+# This file is managed through git and is symlinked from a cloned repository
+# on this machine. Type `ls -al` to view the source location of this file.
+# Any changes made must be checked in to git otherwise they will be overwritten.
+# https://wwwin-github.cisco.com/GVS-CS-DSX/server_config
+#
+# //////////////////////////////////////////////////////////////////////////////
+
+default_cores=4
+filter_kernels="true"
+username=$(who -m | awk '{print $1;}')
+
+doc_string="""
+ljupyter
+
+Usage:
+  ljupyter <task_slots> [--cores <cores>|--max-memory|--memory|--dense-compute] [--user] [--all-kernels]
+  ljupyter -h | --help
+
+Arguments:
+  <task_slots>                     Number of task slots needed
+
+Options:
+  -c <cores> --cores <cores>       Specify the number of cores per executor [default: 4]
+  -mx --max-memory                 Maximum memory per executor. Equivalent to '--cores 1'.
+  -m --memory                      Memory optimized executors. Equivalent to '--cores 2'.
+  -d --dense-compute               Extra cores per executor. Equivalent to '--cores 8'.
+  -u --user                        Launch from user directory.
+  -a --all-kernels                 Show all kernels on the system.
+  -h --help                        Show this screen.
+"""
+
+# Load dependencies
+. ~/bin/cd_user_home.sh
+
+
+# Parse flags and set cores
+positional=()
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+    case ${key} in
+        -h|--help)
+        print_help=true
+        shift
+        ;;
+        -c|--cores)
+        cores=$2
+        shift
+        shift
+        ;;
+        -mx|--max-memory)
+        cores=1
+        shift
+        ;;
+        -m|--memory)
+        cores=2
+        shift
+        ;;
+        -d|--dense-compute)
+        cores=8
+        shift
+        ;;
+        -u|--user)
+        cd_user_home
+        shift
+        ;;
+        -a|--all-kernels)
+        filter_kernels="false"
+        shift
+        ;;
+        *)
+        positional+=("$1")
+        shift
+        ;;
+    esac
+done
+
+# Restore positional parameters
+set -- "${positional[@]}"
+
+
+# Show help if requested
+if [[ ${print_help} == true ]]; then
+    echo "${doc_string}"
+    exit 0
+fi
+
+# Show help if required args are missing
+task_slots="$1"
+if [[ ${task_slots} == "" ]]; then
+    echo "${doc_string}"
+    exit 0
+fi
+
+# Set default cores if needed
+if [[ ${cores} == "" ]]; then
+   cores=${default_cores}
+fi
+
+# Verify task slots and cores
+number_re="^[0-9]+$"
+if ! [[ ${task_slots} =~ $number_re ]]; then
+   echo "error: 'task_slots' is not a number" >&2
+   echo "${doc_string}"
+   exit 1
+fi
+if ! [[ ${cores} =~ $number_re ]]; then
+   echo "error: 'cores' is not a number" >&2
+   echo "${doc_string}"
+   exit 1
+fi
+
+
+# Determine number of executors, rounding up if needed.
+executors=$(( (${task_slots} + (${cores} - 1)) / ${cores} ))
+
+
+# Set Environment Variables where needed
+export DSX_SPARK_EXECUTORS=${executors}
+export DSX_SPARK_CORES=${cores}
+
+if [ "${JUPYTER_MODE}" = "" ]; then
+    echo "JUPYTER_MODE not set. Defaulting to 'jupyter notebook'."
+    export JUPYTER_MODE='jupyter notebook'
+fi
+
+
+# Configure Jupyter
+jupyter_args=""
+
+echo ""
+echo "============================= Jupyter Configuration ============================="
+echo ""
+echo "Launching Jupyter with the following cluster size:"
+echo "  > Total Task Slots: $((${executors} * ${cores}))"
+echo "  > Number of Executors: ${executors}"
+echo "  > Cores Per Executor: ${cores}"
+echo ""
+
+# Find an open port
+echo "Searching for an open port..."
+open_port=$(net port-scan:open 8888:9300 49152:65535 -r -o)
+jupyter_url="http://$(hostname):${open_port}"
+jupyter_args="${jupyter_args} --port="${open_port}
+
+echo "Access Jupyter with the following URLs"
+echo "  > Jupyter Notebook:  ${jupyter_url}/tree"
+echo "  > Jupyter Lab:       ${jupyter_url}/lab"
+echo ""
+
+# Filter Kernels
+py_kernel_filter="""
+import os, re
+from jupyter_client.kernelspec import find_kernel_specs
+r = re.compile('^({}|{})\..*'.format(os.getlogin(), 'envs'))
+print(filter(r.match, find_kernel_specs().viewkeys()))
+"""
+
+if [ "${filter_kernels}" = "true" ]; then
+    echo "Finding your kernels..."
+    kernels=$(python -c "${py_kernel_filter}")
+    kernel_whitelist='"--KernelSpecManager.whitelist='${kernels}'"'
+    jupyter_args="${jupyter_args} ${kernel_whitelist}"
+    
+    echo "Only loading your user kernels and global (envs) kernels."
+    echo "Use the flag '--all-kernels' to load all available kernels."
+    echo ""
+fi
+
+# Start Jupyter
+echo "================================================================================="
+echo "                                Starting Jupyter                                 "
+echo "---------------------------------------------------------------------------------"
+echo ""
+echo "${jupyter_args}"
+eval "${JUPYTER_MODE} ${jupyter_args}"
