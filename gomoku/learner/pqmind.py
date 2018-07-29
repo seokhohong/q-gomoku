@@ -229,7 +229,7 @@ class PQMind:
 
                 else:
                     q_search_nodes.append(child)
-                    vector, player = board.get_matrix(as_player=board.player_to_move), board.player_to_move
+                    vector, player = board.get_matrix(), board.player_to_move
                     q_search_vectors.append(vector)
                     q_search_player.append(player)
 
@@ -237,7 +237,7 @@ class PQMind:
                 board.unmove()
 
             # update p
-            vector, player = board.get_matrix(as_player=board.player_to_move), board.player_to_move
+            vector, player = board.get_matrix(), board.player_to_move
             p_search_vectors.append(vector)
             p_search_players.append(player)
 
@@ -284,7 +284,7 @@ class PQMind:
         return True
 
     def q(self, board, as_player):
-        prediction = self.value_est.predict([np.array([board.get_matrix(as_player).reshape(board.size, board.size, -1)])])[0][0]
+        prediction = self.value_est.predict([np.array([board.get_matrix().reshape(board.size, board.size, -1)])])[0][0]
         return prediction
 
     # with epsilon probability will select random move
