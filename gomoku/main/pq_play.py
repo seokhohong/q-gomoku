@@ -37,13 +37,13 @@ def run():
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
 
-    for i in range(500, 50000):
+    for i in range(1, 50000):
         round_board = detail_board.Board(size=SIZE, win_chain_length=5)
 
         print('Game', i)
 
         # randomize the board a bit
-        for j in range(random.randint(0, 3)):
+        for j in range(random.randint(0, 5)):
             round_board.make_random_move()
 
         current_player = round_board.player_to_move
@@ -66,5 +66,7 @@ def run():
             current_player = -current_player
             if result:
                 break
+
+        print('done')
 if __name__ == "__main__":
     run()

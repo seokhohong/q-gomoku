@@ -13,7 +13,7 @@ from core import optimized_minimax
 
 random_state = np.random.RandomState(42)
 
-MIN_Q = -1
+MIN_MODEL = -1
 MAX_Q = 1
 
 class PQMind:
@@ -320,6 +320,8 @@ class PQMind:
 
         for i, vector in enumerate(board_vectors):
             clamped_result = max(min(result, MAX_Q), MIN_Q)
+            if abs(clamped_result) > 0.999:
+                print('won')
             self.train_vectors.append(vector)
             self.train_q.append(clamped_result)
             # get the i'th rotation
