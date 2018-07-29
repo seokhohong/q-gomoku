@@ -13,9 +13,6 @@ from core import optimized_minimax
 
 random_state = np.random.RandomState(42)
 
-MIN_Q = -1
-MAX_Q = 1
-
 class PQMind:
     def __init__(self, size, alpha, init=True, channels=1):
 
@@ -295,6 +292,8 @@ class PQMind:
             new_q = best_q
         else:
             new_q = (1 - self.alpha) * current_q + self.alpha * best_q
+            # compress to model valid range
+            new_q = max(min(new_q, optimized_minimax.PVSNode.MAX_MODEL_Q), optimized_minimax.PVSNode.MIN_MODEL_Q)
             
         print(current_q, best_q)
         self.add_train_example(board, new_q, move)
@@ -319,11 +318,10 @@ class PQMind:
         board_vectors = board.get_rotated_matrices()
 
         for i, vector in enumerate(board_vectors):
-            clamped_result = max(min(result, MAX_Q), MIN_Q)
-            if abs(clamped_result) > 0.999:
+            if abs(result) > 0.999:
                 print('won')
             self.train_vectors.append(vector)
-            self.train_q.append(clamped_result)
+            self.train_q.append(result)
             # get the i'th rotation
             which_rotation = board.get_rotated_point(self.move_to_index(move))[i]
             self.train_p.append(self.one_hot_p(which_rotation))
