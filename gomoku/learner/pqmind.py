@@ -25,7 +25,6 @@ class PQMind:
         self.value_est = self.get_value_model()
         self.policy_est = self.get_policy_model()
 
-
         # initialization
         init_examples = 10
 
@@ -55,7 +54,7 @@ class PQMind:
         bn2 = BatchNormalization()(conv_1)
         conv_2 = Convolution2D(32, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn2)
-        #bn3 = BatchNormalization()(conv_2)
+        bn3 = BatchNormalization()(conv_2)
         #conv_3 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
         #                       kernel_initializer='random_normal', use_bias=False)(bn3)
         #bn4 = BatchNormalization()(conv_3)
@@ -63,7 +62,7 @@ class PQMind:
         #                       kernel_initializer='random_normal', use_bias=False)(bn4)
         #bn5 = BatchNormalization()(conv_4)
 
-        flat = Flatten()(bn2)
+        flat = Flatten()(bn3)
 
         hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
         bn_final = BatchNormalization()(hidden)
@@ -88,11 +87,11 @@ class PQMind:
         conv_3 = Convolution2D(32, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn3)
         bn4 = BatchNormalization()(conv_3)
-        conv_4 = Convolution2D(16, (3, 3), padding='same', activation='relu',
-                               kernel_initializer='random_normal', use_bias=False)(bn4)
-        bn5 = BatchNormalization()(conv_4)
+        #conv_4 = Convolution2D(16, (3, 3), padding='same', activation='relu',
+        #                       kernel_initializer='random_normal', use_bias=False)(bn4)
+        #bn5 = BatchNormalization()(conv_4)
 
-        flat = Flatten()(bn5)
+        flat = Flatten()(bn4)
 
         hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
         bn_final = BatchNormalization()(hidden)
@@ -202,12 +201,7 @@ class PQMind:
         # each board state is defined by a list of moves
         q_search_nodes = []
         q_search_vectors = []
-        q_search_player = []
-
         p_search_vectors = []
-        p_search_players = []
-
-        validation_matrix = np.copy(board.matrix)
 
         for parent in nodes_to_expand:
             # for each move except the last, make rapid moves on board
@@ -229,23 +223,19 @@ class PQMind:
 
                 else:
                     q_search_nodes.append(child)
-                    vector, player = board.get_matrix(), board.player_to_move
+                    vector = board.get_matrix()
                     q_search_vectors.append(vector)
-                    q_search_player.append(player)
 
                 # unmove for child
                 board.unmove()
 
             # update p
-            vector, player = board.get_matrix(), board.player_to_move
+            vector = board.get_matrix()
             p_search_vectors.append(vector)
-            p_search_players.append(player)
 
             # unwind parent
             for i in range(len(parent.full_move_list)):
                 board.unmove()
-
-        assert(np.array_equal(board.matrix, validation_matrix))
 
         if len(q_search_vectors) == 0:
             # recalculate for wins/draws
@@ -283,14 +273,14 @@ class PQMind:
 
         return True
 
-    def q(self, board, as_player):
+    def q(self, board):
         prediction = self.value_est.predict([np.array([board.get_matrix().reshape(board.size, board.size, -1)])])[0][0]
         return prediction
 
     # with epsilon probability will select random move
     # returns whether game has concluded or not
-    def make_move(self, board, as_player, retrain=True, verbose=True, epsilon=0.1, max_depth=5, max_iters=10, k=25):
-        current_q = self.q(board, as_player)
+    def make_move(self, board, as_player, verbose=True, epsilon=0.1, max_depth=5, max_iters=10, k=25):
+        current_q = self.q(board)
         assert(as_player == board.player_to_move)
 
         move, best_q = self.pvs(board,
@@ -301,22 +291,17 @@ class PQMind:
                                 k=k)
 
         # ignore learning rate if outcome is guaranteed
-        if abs(best_q) > optimized_minimax.PVSNode.MAX_MODEL_Q:
+        if optimized_minimax.PVSNode.is_result_q(best_q):
             new_q = best_q
         else:
             new_q = (1 - self.alpha) * current_q + self.alpha * best_q
             
         print(current_q, best_q)
-        self.add_train_example(board, as_player, new_q, move)
+        self.add_train_example(board, new_q, move)
 
         board.move(move[0], move[1])
 
-        if board.game_over():
-            if retrain:
-                self.update_model()
-            return True
-
-        return False
+        return board.game_over()
 
     def one_hot_p(self, move_index):
         vector = np.zeros((self.size ** 2))
@@ -330,47 +315,17 @@ class PQMind:
         return np.int(index / self.size), index % self.size
 
     # adds rotations
-    def add_train_example(self, board, as_player, result, move, invert_board=False):
-        board_vectors = board.get_rotated_matrices(as_player=as_player)
+    def add_train_example(self, board, result, move):
+        board_vectors = board.get_rotated_matrices()
 
         for i, vector in enumerate(board_vectors):
             clamped_result = max(min(result, MAX_Q), MIN_Q)
-            self.train_vectors.append((vector, as_player))
+            self.train_vectors.append(vector)
             self.train_q.append(clamped_result)
             # get the i'th rotation
             which_rotation = board.get_rotated_point(self.move_to_index(move))[i]
             self.train_p.append(self.one_hot_p(which_rotation))
-            #self.train_p.append(which_rotation)
 
-    def update_model(self):
-
-        train_inputs = [[], []]
-        for vector, whose_move in self.train_vectors:
-            train_inputs[0].append(vector.reshape(self.size, self.size, 1))
-            train_inputs[1].append(whose_move)
-            
-        train_inputs[0] = np.array(train_inputs[0])
-        train_inputs[1] = np.array(train_inputs[1])
-
-        print(len(self.train_vectors))
-        with tf.device('/gpu:1'):
-            if len(self.train_vectors) > 0:
-                self.value_est.fit(x=train_inputs,
-                                    y=np.array(self.train_q),
-                                    shuffle=True,
-                                    validation_split=0.1)
-                self.policy_est.fit(x=train_inputs,
-                                    y=np.array(self.train_p),
-                                    shuffle=True,
-                                    validation_split=0.1)
-
-        max_vectors = 5000
-        while len(self.train_vectors) > max_vectors:
-            self.train_vectors = self.train_vectors[100:]
-            self.train_p = self.train_p[100:]
-            self.train_q = self.train_q[100:]
-
-        print('Num Train Vectors', len(self.train_vectors))
 
     def save(self, filename):
         self.value_est.save(filename + '_value.net')

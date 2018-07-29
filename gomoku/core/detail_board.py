@@ -121,7 +121,7 @@ class Board:
                                turn_matrix), axis=2)
 
 
-    def get_rotated_matrices(self, as_player):
+    def get_rotated_matrices(self):
         matrix = self.get_matrix()
         return [
             matrix,

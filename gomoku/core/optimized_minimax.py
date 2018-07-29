@@ -121,6 +121,11 @@ class PVSNode:
             # update pvs for parent
             self.parent.recalculate_q()
 
+    @classmethod
+    # whether the q is from a game result (as opposed to an approximation of game state)
+    def is_result_q(cls, q):
+        return abs(q) > PVSNode.MAX_MODEL_Q or abs(q) < 1E-7
+
     def __str__(self):
         if self.principle_variation:
             return ("PV: " + str(self.principle_variation.full_move_list.moves) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.log_total_p)
