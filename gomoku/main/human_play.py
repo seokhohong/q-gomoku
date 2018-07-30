@@ -9,7 +9,7 @@ CHANNELS = 20
 
 if __name__ == "__main__":
     mind = pqmind.PQMind(size=SIZE, alpha=0.2, init=False, channels=20)
-    mind.load_net('../models/7_channel20')
+    mind.load_net('../models/7_20')
     round_board = detail_board.Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
@@ -20,11 +20,11 @@ if __name__ == "__main__":
 
     while True:
         if round_board.player_to_move == 1:
-            inp = input("Input your move (i.e. \"3,5\"): ")
-            if len(inp.split(',')) != 2:
+            inp = input("Input your move (i.e. \"3 5\"): ")
+            if len(inp.split(' ')) != 2:
                 print('Incorrect number of coordinates, please try again!')
                 continue
-            x, y = inp.split(',')
+            x, y = inp.split(' ')
             try:
                 x = int(x)
                 y = int(y)
