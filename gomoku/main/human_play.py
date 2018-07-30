@@ -5,10 +5,11 @@ from core import detail_board
 import random
 
 SIZE = 7
+CHANNELS = 20
 
 if __name__ == "__main__":
-    mind = pqmind.PQMind(size=SIZE, alpha=0.2, init=False, channels=19)
-    mind.load_net('../models/distributed_7_with_19chain')
+    mind = pqmind.PQMind(size=SIZE, alpha=0.2, init=False, channels=20)
+    mind.load_net('../models/7_channel20')
     round_board = detail_board.Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
