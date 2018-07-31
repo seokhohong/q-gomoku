@@ -1,4 +1,3 @@
-from enum import Enum
 from collections import defaultdict
 
 import numpy as np
@@ -13,7 +12,7 @@ class Move:
         self.y = y
 
 
-class GameState(Enum):
+class GameState:
     WON = 1
     DRAW = 2
     NOT_OVER = 3
