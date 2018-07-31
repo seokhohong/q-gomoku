@@ -185,12 +185,13 @@ class PExpMind:
         # all nodes at the leaves of the search tree
         leaf_nodes = SortedSet(principal_variations, key=lambda x: -x.log_total_p)
 
-        explored_states = 0
+        explored_states = 1
         for i in range(max_iters):
             self.p_expand(board, principal_variations)
+            current_leaves = len(leaf_nodes)
             self.pvs_catch_leaves(leaf_nodes, principal_variations, max_depth=max_depth)
-            explored_states += len(leaf_nodes)
-
+            # new states
+            explored_states += len(leaf_nodes) - current_leaves
             # don't need to prepare for next iteration
             if i < max_iters - 1:
                 principal_variations = self.pvs_k_principal_variations(leaf_nodes, k=k)
@@ -198,7 +199,7 @@ class PExpMind:
                     print("Exhausted Search")
                     break
 
-        print("Explored " + str(explored_states) + " States")
+        print('Explored ' + str(explored_states) + " States")
 
         if len(leaf_nodes) > 0:
             # find best node (highest q)
@@ -332,7 +333,7 @@ class PExpMind:
 
     # with epsilon probability will select random move
     # returns whether game has concluded or not
-    def make_move(self, board, as_player, verbose=True, epsilon=0.1, max_depth=5, max_iters=10, k=25, max_eval_q=np.inf):
+    def make_move(self, board, as_player, verbose=True, epsilon=0.1, max_depth=5, max_iters=10, k=25, fraction_q=0.25, max_eval_q=np.inf):
         current_q = self.q(board)
         assert(as_player == board.player_to_move)
 
@@ -341,6 +342,7 @@ class PExpMind:
                                              max_iters=max_iters,
                                              k=k,
                                              max_depth=max_depth,
+                                             fraction_q=fraction_q,
                                              max_eval_q=max_eval_q)
 
         # best action is 0th index

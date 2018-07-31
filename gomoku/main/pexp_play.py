@@ -1,6 +1,7 @@
 from learner import pexp_mind
 from learner import deep_conv_mind
 from core import detail_board
+from core.board import Board
 from copy import deepcopy
 from collections import defaultdict
 from learner import conv_mind
@@ -32,13 +33,13 @@ def iter_function(i):
         return 20
 
 def run():
-    mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=20)
-    mind.load_net('../models/7_20')
+    mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=4)
+    #mind.load_net('../models/7_20')
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
 
     for i in range(50000):
-        round_board = detail_board.Board(size=SIZE, win_chain_length=5)
+        round_board = Board(size=SIZE, win_chain_length=5)
 
         print('Game', i)
 
@@ -59,15 +60,27 @@ def run():
                                     as_player=current_player,
                                     epsilon=0.1,
                                     max_depth=10,
-                                    k=SIZE ** 2,
-                                    max_iters=20,
-                                    max_eval_q=5000,
+                                    k=SIZE ** 3,
+                                    max_iters=10,
+                                    max_eval_q=500,
                                     )
             print(round_board.pprint())
             current_player = -current_player
             if result:
                 break
+            return
 
         print('done')
 if __name__ == "__main__":
+    import cProfile, pstats
+    from io import StringIO
+
+    pr = cProfile.Profile()
+    pr.enable()
     run()
+    pr.disable()
+    s = StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())

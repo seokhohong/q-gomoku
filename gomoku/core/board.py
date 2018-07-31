@@ -23,11 +23,17 @@ class Board:
     NO_PLAYER = 0
     FIRST_PLAYER = 1
     SECOND_PLAYER = -1
+    TURN_INFO_INDEX = 3
+    FIRST_PLAYER_INDEX = 1
+    SECOND_PLAYER_INDEX = 2
 
     def __init__(self, size=5, win_chain_length=3):
         self.size = size
-        self.matrix = np.zeros((self.size, self.size))
-        self.matrix.fill(Board.NO_PLAYER)
+
+        # three for No Player, Player 1, Player 2, one for turn index
+        self.matrix = np.zeros((self.size, self.size, 4))
+        self.matrix[:, :, Board.NO_PLAYER].fill(1)
+
         self.win_chain_length = win_chain_length
         # store (x, y, player) tuple
         self.ops = []
@@ -47,39 +53,35 @@ class Board:
     def _mark_not_computed(self):
         self.state_computed = False
 
-    # lightweight version of move
-    def hypothetical_move(self, x, y):
-        assert (self.game_state is GameState.NOT_OVER)
-        self.ops.append(Move(self.player_to_move, x, y))
-        self.matrix[x, y] = self.player_to_move
-        self.available_moves.remove((x, y))
-        self.flip_player_to_move()
-        self._mark_not_computed()
-
     def unmove(self):
         previous_move = self.ops.pop()
-        self.matrix[previous_move.x, previous_move.y] = Board.NO_PLAYER
+        if previous_move.player == Board.FIRST_PLAYER:
+            self.matrix[previous_move.x, previous_move.y, Board.FIRST_PLAYER_INDEX] = 0
+        else:
+            self.matrix[previous_move.x, previous_move.y, Board.SECOND_PLAYER_INDEX] = 0
+
+        self.matrix[previous_move.x, previous_move.y, Board.NO_PLAYER] = 1
+
         self.available_moves.add((previous_move.x, previous_move.y))
         self.flip_player_to_move()
         self.game_state = GameState.NOT_OVER
 
-    # +1 for self, -1 for other
-    def get_matrix(self, as_player):
-        if as_player == Board.FIRST_PLAYER:
-            return np.copy(self.matrix)
-        return -np.copy(self.matrix)
+    def get_matrix(self):
+        self.matrix[:, :, Board.TURN_INFO_INDEX].fill(self.player_to_move)
+        return np.copy(self.matrix)
 
-    def get_rotated_matrices(self, as_player):
-        matrix = self.get_matrix(as_player)
+    def get_rotated_matrices(self):
+        transposition_axes = (1, 0, 2)
+        matrix = self.get_matrix()
         return [
             matrix,
-            matrix.transpose(),
+            np.transpose(matrix, axes=transposition_axes),
             np.rot90(matrix),
-            np.rot90(matrix).transpose(),
+            np.transpose(np.rot90(matrix), axes=transposition_axes),
             np.rot90(matrix, 2),
-            np.rot90(matrix, 2).transpose(),
+            np.transpose(np.rot90(matrix, 2), axes=transposition_axes),
             np.rot90(matrix, 3),
-            np.rot90(matrix, 3).transpose()
+            np.transpose(np.rot90(matrix, 3), axes=transposition_axes)
         ]
 
     def cache_rotations(self):
@@ -105,18 +107,24 @@ class Board:
     def get_rotated_point(self, index):
         return self.cached_point_rotations[index]
 
-    # deprecate
-    def make_move(self, x, y):
+    def move(self, x, y):
         assert(self.game_state is GameState.NOT_OVER)
         self.ops.append(Move(self.player_to_move, x, y))
-        self.matrix[x, y] = self.player_to_move
+
+        if self.player_to_move == Board.FIRST_PLAYER:
+            self.matrix[x, y, Board.FIRST_PLAYER_INDEX] = 1
+        else:
+            self.matrix[x, y, Board.SECOND_PLAYER_INDEX] = 1
+
+        self.matrix[x, y, Board.NO_PLAYER] = 0
+
         self.available_moves.remove((x, y))
         self.flip_player_to_move()
         self.compute_game_state()
 
     def make_random_move(self):
         move_x, move_y = random.choice(list(self.available_moves))
-        self.hypothetical_move(move_x, move_y)
+        self.move(move_x, move_y)
 
     def flip_player_to_move(self):
         if self.player_to_move == Board.FIRST_PLAYER:
@@ -145,8 +153,15 @@ class Board:
     def in_bounds(self, x, y):
         return 0 <= x < self.size and 0 <= y < self.size
 
+    def center_stone(self, x, y):
+        if int(self.matrix[x, y, Board.FIRST_PLAYER_INDEX]) == 1:
+            return Board.FIRST_PLAYER_INDEX
+        if int(self.matrix[x, y, Board.SECOND_PLAYER_INDEX]) == 1:
+            return Board.SECOND_PLAYER_INDEX
+        return Board.NO_PLAYER
+
     def chain_length(self, center_x, center_y, delta_x, delta_y):
-        center_stone = self.matrix[center_x, center_y]
+        center_stone = self.center_stone(center_x, center_y)
         if center_stone == Board.NO_PLAYER:
             return 0
         chain_length = 1
@@ -154,7 +169,7 @@ class Board:
             step_x = delta_x * step
             step_y = delta_y * step
             if 0 <= center_x + step_x < self.size and 0 <= center_y + step_y < self.size and \
-                    self.matrix[center_x + step_x, center_y + step_y] == center_stone:
+                    self.matrix[center_x + step_x, center_y + step_y, center_stone] == 1:
                 chain_length += 1
             else:
                 break
@@ -180,11 +195,11 @@ class Board:
             move = utils.peek_stack(self.ops)
             if move:
                 was_last_move = (x == move.x and y == move.y)
-                if self.matrix[x, y] == Board.FIRST_PLAYER:
+                if self.matrix[x, y, Board.FIRST_PLAYER_INDEX] == 1:
                     if was_last_move:
                         return 'X'
                     return 'x'
-                elif self.matrix[x, y] == Board.SECOND_PLAYER:
+                elif self.matrix[x, y, Board.SECOND_PLAYER_INDEX] == 1:
                     if was_last_move:
                         return 'O'
                     return 'o'

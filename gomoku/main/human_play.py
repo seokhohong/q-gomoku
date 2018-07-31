@@ -1,5 +1,6 @@
 
 from learner import pqmind
+from learner import pexp_mind
 from core import detail_board
 
 import random
@@ -8,7 +9,7 @@ SIZE = 7
 CHANNELS = 20
 
 if __name__ == "__main__":
-    mind = pqmind.PQMind(size=SIZE, alpha=0.2, init=False, channels=20)
+    mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=20)
     mind.load_net('../models/7_20')
     round_board = detail_board.Board(size=SIZE, win_chain_length=5)
 
@@ -41,12 +42,14 @@ if __name__ == "__main__":
             print(round_board.guide_print())
         else:
             print('Computer is thinking...')
-            move, best_q = mind.pvs(round_board,
-                                    epsilon=0,
-                                    verbose=True,
+            possible_moves = mind.pvs_best_moves(round_board,
                                     max_depth=20,
-                                    max_iters=15,
+                                    max_iters=20,
                                     k=SIZE ** 2)
+            picked_move, picked_node = possible_moves[0]
+            # add training example assuming best move
+            move, best_node = possible_moves[0]
+            best_q = best_node.q
             print(" ")
             print(move, 'Q:', best_q)
 

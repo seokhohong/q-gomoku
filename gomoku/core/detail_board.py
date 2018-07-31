@@ -29,7 +29,7 @@ class Board:
 
     def __init__(self, size=5, win_chain_length=3):
         self.size = size
-        # three channels
+
         self.matrix = np.zeros((self.size, self.size, 3))
         self.matrix[:, :, Board.NO_PLAYER].fill(1)
 
