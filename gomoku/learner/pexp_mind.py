@@ -219,7 +219,7 @@ class PExpMind:
     def q_eval(self, leaf_nodes, fraction_q, min_eval_q=10, max_eval_q=1000):
         # will only contain leaves of games not being over
         number_eval = min(max(min_eval_q, int(fraction_q * len(leaf_nodes))), len(leaf_nodes), max_eval_q)
-        best_leaves = list(leaf_nodes.islice(0, number_eval))
+        best_leaves = sorted(list(leaf_nodes.islice(0, number_eval)), key=lambda x : x.log_total_p / len(x.full_move_list), reverse=True)
         parents_to_update = set()
         board_matrices = []
         for leaf in best_leaves:
