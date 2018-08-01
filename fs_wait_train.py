@@ -28,10 +28,10 @@ BATCH_SIZE = 100
 GAME_BATCH = 500
 
 VECTORS_NPZ = 'gomoku/models/waiting_vectors.npz'
-VECTORS_COMPLETE = 'gomoku/models/waiting_vectors_complete'
+VECTORS_COMPLETE = 'gomoku/models/waiting_vectors_complete_4'
 P_MODEL = "gomoku/models/waiting_p.model"
 Q_MODEL = "gomoku/models/waiting_q.model"
-MODEL_COMPLETE = 'gomoku/models/waiting_models_complete'
+MODEL_COMPLETE = 'gomoku/models/waiting_models_complete_4'
 
 PATIENCE = 3
 
@@ -91,6 +91,7 @@ def train_model(npz):
     with open(MODEL_COMPLETE, 'w') as f:
         f.write('')
     
+    print('Models Complete')
 
 
 # In[ ]:

@@ -18,7 +18,7 @@ cores=1
 min_executors="1"
 min_cores="$(($min_executors * $cores))"
 max_cores="$(($executors * $cores))"
-max_memory="$(($executors * 4))"
+max_memory="$(($executors * 3))"
 
 name="PySpark ("$user") Max Cores: "$max_cores" / Max Memory: "$max_memory"g"
 export MAPR_HOME=/opt/mapr
