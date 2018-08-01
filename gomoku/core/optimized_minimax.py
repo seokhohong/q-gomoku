@@ -99,6 +99,13 @@ class PExpNode:
         else:
             self.move_goodness = self.q + len(self.principal_variation.full_move_list) * 1E-6
 
+    # ab cutoff for when we know we can
+    def ab_valid(self, epsilon=1E-7):
+        if self.parent and self.parent.q:
+            return self.parent.is_maximizing and self.parent.q < PExpNode.MAX_Q \
+                    or not self.parent.is_maximizing and self.parent.q > PExpNode.MIN_Q
+        return True
+
     def assign_p(self, log_p):
         self.log_local_p = log_p
         self.log_total_p = self.parent.log_total_p + self.log_local_p

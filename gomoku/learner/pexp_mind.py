@@ -154,13 +154,14 @@ class PExpMind:
         return model
 
     # after parents are expanded, this method recomputes all leaves
-    def pvs_catch_leaves(self, leaf_nodes, new_parents, max_depth=5):
+    def pvs_catch_leaves(self, leaf_nodes, new_parents):
         for parent in new_parents:
             if parent in leaf_nodes:
                 leaf_nodes.remove(parent)
             # if parent is not too deep and isn't a game ending state
-            if len(parent.full_move_list) < max_depth and parent.game_status == GameState.NOT_OVER:
-                leaf_nodes.update([child for child in parent.children.values() if child.game_status == GameState.NOT_OVER])
+            if parent.game_status == GameState.NOT_OVER:
+                leaf_nodes.update([child for child in parent.children.values() if child.game_status == GameState.NOT_OVER
+                                            and child.ab_valid()])
 
     def pvs_k_principal_variations(self, leaf_nodes, k=5):
         # include the best move according to q
@@ -175,9 +176,10 @@ class PExpMind:
     # board perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
 
-    def pvs_best_moves(self, board, max_iters=10, k=25, max_depth=5, fraction_q=0.25, max_eval_q=10):
+    def pvs_best_moves(self, board, max_iters=10, k=25, required_depth=5, fraction_q=0.25, max_eval_q=10):
+        is_maximizing = True if board.player_to_move == 1 else False
         root_node = optimized_minimax.PExpNode(parent=None,
-                                    is_maximizing=True if board.player_to_move == 1 else False,
+                                    is_maximizing=is_maximizing,
                                     full_move_list=optimized_minimax.MoveList(moves=()))
 
         principal_variations = [root_node]
@@ -186,24 +188,46 @@ class PExpMind:
         leaf_nodes = SortedSet(principal_variations, key=lambda x: -x.log_total_p)
 
         explored_states = 1
-        for i in range(max_iters):
+        i = 0
+        while i < max_iters or len(root_node.principal_variation.full_move_list) < required_depth:
+            i += 1
             self.p_expand(board, principal_variations)
             current_leaves = len(leaf_nodes)
-            self.pvs_catch_leaves(leaf_nodes, principal_variations, max_depth=max_depth)
+            self.pvs_catch_leaves(leaf_nodes, principal_variations)
             # new states
             explored_states += len(leaf_nodes) - current_leaves
             # don't need to prepare for next iteration
-            if i < max_iters - 1:
-                principal_variations = self.pvs_k_principal_variations(leaf_nodes, k=k)
-                if not principal_variations:
-                    print("Exhausted Search")
-                    break
 
-        print('Explored ' + str(explored_states) + " States")
+            principal_variations = self.pvs_k_principal_variations(leaf_nodes, k=k)
+            # nothing left
+            if not principal_variations:
+                print("Exhausted Search")
+                break
 
-        if len(leaf_nodes) > 0:
-            # find best node (highest q)
-            self.q_eval(leaf_nodes, fraction_q=fraction_q, max_eval_q=max_eval_q)
+            # P will already have been expanded so do a Q eval
+            if root_node.principal_variation:
+                self.q_eval([node for node in root_node.principal_variation.children.values() if node.game_status == GameState.NOT_OVER])
+
+            self.q_eval_top_leaves(leaf_nodes, fraction_q=0.1, min_eval_q=k)
+            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=k * 3, num_leaves=k)
+
+            next_pvs_set = set(next_pvs)
+            for node in principal_variations:
+                if node and node not in next_pvs_set and node == GameState.NOT_OVER:
+                    next_pvs.append(node)
+
+            # if we have a PV, add it to expand
+            if root_node.principal_variation and root_node.game_status == GameState.NOT_OVER:
+                next_pvs.append(root_node.principal_variation)
+
+            principal_variations.extend(next_pvs)
+
+            #print('Root', root_node.principal_variation)
+            #for node in principal_variations:
+            #    print(node.principal_variation)
+            #print(" ")
+
+        print('Explored ' + str(explored_states) + " States in " + str(i) + " Iterations")
 
         possible_moves = root_node.get_sorted_moves()
 
@@ -216,31 +240,43 @@ class PExpMind:
 
         return possible_moves
 
-    def q_eval(self, leaf_nodes, fraction_q, min_eval_q=10, max_eval_q=1000):
-        # will only contain leaves of games not being over
-        number_eval = min(max(min_eval_q, int(fraction_q * len(leaf_nodes))), len(leaf_nodes), max_eval_q)
-        best_leaves = sorted(list(leaf_nodes.islice(0, number_eval)), key=lambda x : x.log_total_p / len(x.full_move_list), reverse=True)
+    def highest_leaf_qs(self, leaf_nodes, is_maximizing, max_p_eval=100, num_leaves=10):
+        number_eval = min(max_p_eval, len(leaf_nodes))
+        best_leaves = sorted([leaf for leaf in leaf_nodes.islice(0, number_eval) if leaf.q], key=lambda x: x.q, reverse=not is_maximizing)
+        return best_leaves[:num_leaves]
+
+    def q_eval(self, nodes):
         parents_to_update = set()
         board_matrices = []
-        for leaf in best_leaves:
+        for leaf in nodes:
+            # normally not, but it can be if nodes = PV's children
             assert(leaf.game_status == GameState.NOT_OVER)
             parents_to_update.add(leaf.parent)
             board_matrices.append(leaf.get_matrix())
 
+        # if nothing to eval, get out
+        if len(board_matrices) == 0:
+            return
 
         # attach q predictions to all leaves and compute q tree at once
         q_predictions = np.clip(
                     self.value_est.predict(np.array(board_matrices),
                                                         batch_size=1000).reshape(len(board_matrices)),
-                    a_max=optimized_minimax.PExpNode.MAX_Q - 0.01,
-                    a_min=optimized_minimax.PExpNode.MIN_Q + 0.01
+                    a_max=optimized_minimax.PExpNode.MAX_MODEL_Q,
+                    a_min=optimized_minimax.PExpNode.MIN_MODEL_Q
             )
 
-        for i, leaf in enumerate(best_leaves):
+        for i, leaf in enumerate(nodes):
             leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
 
         for parent in parents_to_update:
             parent.recalculate_q()
+
+    def q_eval_top_leaves(self, leaf_nodes, fraction_q, min_eval_q=10, max_eval_q=1000):
+        # will only contain leaves of games not being over
+        number_eval = min(max(min_eval_q, int(fraction_q * len(leaf_nodes))), len(leaf_nodes), max_eval_q)
+        best_leaves = list(leaf_nodes.islice(0, number_eval))
+        self.q_eval(best_leaves)
 
     def p_expand(self, board, nodes_to_expand):
 
@@ -291,7 +327,7 @@ class PExpMind:
             # unwind parent
             for i in range(len(parent.full_move_list)):
                 board.unmove()
-
+        # for game completed states
         for parent in parents_to_recalc:
             parent.recalculate_q()
 
@@ -333,7 +369,7 @@ class PExpMind:
 
     # with epsilon probability will select random move
     # returns whether game has concluded or not
-    def make_move(self, board, as_player, verbose=True, epsilon=0.1, max_depth=5, max_iters=10, k=25, fraction_q=0.25, max_eval_q=np.inf):
+    def make_move(self, board, as_player, verbose=True, epsilon=0.1, required_depth=5, max_iters=10, k=25, fraction_q=0.25, max_eval_q=np.inf):
         current_q = self.q(board)
         assert(as_player == board.player_to_move)
 
@@ -341,7 +377,7 @@ class PExpMind:
         possible_moves = self.pvs_best_moves(board,
                                              max_iters=max_iters,
                                              k=k,
-                                             max_depth=max_depth,
+                                             required_depth=required_depth,
                                              fraction_q=fraction_q,
                                              max_eval_q=max_eval_q)
 

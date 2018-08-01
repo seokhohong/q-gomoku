@@ -2,6 +2,9 @@
 from learner import pqmind
 from learner import pexp_mind
 from core import detail_board
+from numpy.random import RandomState
+
+rs = RandomState(42)
 
 import random
 
@@ -14,7 +17,7 @@ if __name__ == "__main__":
     round_board = detail_board.Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
-    for j in range(random.randint(0, 10)):
+    for j in range(rs.randint(0, 10)):
         round_board.make_random_move()
 
     print(round_board.guide_print())

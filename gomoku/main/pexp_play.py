@@ -7,6 +7,7 @@ from collections import defaultdict
 from learner import conv_mind
 import random
 
+from numpy.random import RandomState
 from sklearn.metrics import mean_absolute_error
 import numpy as np
 import keras
@@ -34,9 +35,11 @@ def iter_function(i):
 
 def run():
     mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=4)
-    #mind.load_net('../models/7_20')
+    mind.load_net('../models/7_channel4_exp')
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
+
+    rs = RandomState(42)
 
     for i in range(50000):
         round_board = Board(size=SIZE, win_chain_length=5)
@@ -44,9 +47,13 @@ def run():
         print('Game', i)
 
         # randomize the board a bit
-        for j in range(random.randint(0, 5)):
+        for j in range(rs.randint(0, 10)):
             round_board.make_random_move()
+        #round_board.move(2, 4)
+        #round_board.move(5, 5)
+        #round_board.move(0, 3)
 
+        print(round_board)
         current_player = round_board.player_to_move
 
         #    versus(c_mind, mind)
@@ -59,8 +66,8 @@ def run():
             result = mind.make_move(round_board,
                                     as_player=current_player,
                                     epsilon=0.1,
-                                    max_depth=10,
-                                    k=SIZE ** 3,
+                                    required_depth=5,
+                                    k=SIZE ** 2,
                                     max_iters=10,
                                     max_eval_q=500,
                                     )
@@ -68,10 +75,12 @@ def run():
             current_player = -current_player
             if result:
                 break
-            return
+            #return
 
         print('done')
 if __name__ == "__main__":
+    run()
+    '''
     import cProfile, pstats
     from io import StringIO
 
@@ -84,3 +93,4 @@ if __name__ == "__main__":
     ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
     ps.print_stats()
     print(s.getvalue())
+    '''
