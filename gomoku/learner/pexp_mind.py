@@ -191,6 +191,11 @@ class PExpMind:
         i = 0
         while i < max_iters or len(root_node.principal_variation.full_move_list) < required_depth:
             i += 1
+
+            if i > max_iters * 10:
+                break
+
+            # p search
             self.p_expand(board, principal_variations)
             current_leaves = len(leaf_nodes)
             self.pvs_catch_leaves(leaf_nodes, principal_variations)
@@ -217,7 +222,7 @@ class PExpMind:
                     next_pvs.append(node)
 
             # if we have a PV, add it to expand
-            if root_node.principal_variation and root_node.game_status == GameState.NOT_OVER:
+            if root_node.principal_variation and root_node.principal_variation.game_status == GameState.NOT_OVER:
                 next_pvs.append(root_node.principal_variation)
 
             principal_variations.extend(next_pvs)
