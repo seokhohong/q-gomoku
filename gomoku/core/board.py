@@ -211,6 +211,31 @@ class Board:
             board_string += "|"
         return board_string
 
+    def guide_print(self):
+        def display_char(x, y):
+            move = utils.peek_stack(self.ops)
+            if move:
+                was_last_move = (x == move.x and y == move.y)
+                if self.matrix[x, y, Board.FIRST_PLAYER_INDEX] == 1:
+                    if was_last_move:
+                        return 'X'
+                    return 'x'
+                elif self.matrix[x, y, Board.SECOND_PLAYER_INDEX] == 1:
+                    if was_last_move:
+                        return 'O'
+                    return 'o'
+            return ' '
+        board_string = " "
+
+        for i in range(0, self.size):
+            board_string += " " + str(i)
+        for i in range(0, self.size):
+            board_string += "\n" + str(i)
+            for j in range(self.size):
+                board_string += "|" + display_char(j, i)
+            board_string += "|"
+        return board_string
+
     def __str__(self):
         return self.pprint()
 

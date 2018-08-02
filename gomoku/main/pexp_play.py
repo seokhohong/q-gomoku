@@ -35,7 +35,7 @@ def iter_function(i):
 
 def run():
     mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=4)
-    mind.load_net('../models/7_channel4_exp')
+    mind.load_net('../models/7_4_2')
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
 
@@ -47,11 +47,18 @@ def run():
         print('Game', i)
 
         # randomize the board a bit
-        for j in range(rs.randint(0, 10)):
-            round_board.make_random_move()
-        #round_board.move(2, 4)
-        #round_board.move(5, 5)
-        #round_board.move(0, 3)
+        #for j in range(rs.randint(0, 10)):
+        #    round_board.make_random_move()
+        round_board.move(2, 2)
+        round_board.move(0, 1)
+        round_board.move(2, 3)
+        round_board.move(2, 1)
+        round_board.move(2, 4)
+        round_board.move(3, 1)
+        round_board.move(4, 3)
+        round_board.move(3, 4)
+        round_board.move(6, 6)
+        round_board.move(4, 1)
 
         print(round_board)
         current_player = round_board.player_to_move
@@ -66,7 +73,7 @@ def run():
             result = mind.make_move(round_board,
                                     as_player=current_player,
                                     epsilon=0.1,
-                                    required_depth=5,
+                                    required_depth=4,
                                     k=SIZE ** 2,
                                     max_iters=10,
                                     max_eval_q=500,
