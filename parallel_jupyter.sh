@@ -38,13 +38,12 @@ pyspark \
   --master yarn \
   --deploy-mode client \
   --driver-memory 14G \
-  --executor-memory 14545m \
   --conf "spark.dynamicAllocation.enabled=true" \
   --conf "spark.executor.instances="$min_executors \
   --conf "spark.dynamicAllocation.maxExecutors="$executors \
   --name "$name" \
   --files /opt/mapr/spark/spark-2.1.0/conf/hive-site.xml  \
   --executor-cores $cores \
-  --properties-file ~/bin/jupyter.conf \
+  --properties-file jupyter.conf \
   --conf "spark.executor.memory=4g"
 
