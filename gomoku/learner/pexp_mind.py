@@ -211,7 +211,8 @@ class PExpMind:
 
             # P will already have been expanded so do a Q eval
             if root_node.principal_variation:
-                self.q_eval([node for node in root_node.principal_variation.children.values() if node.game_status == GameState.NOT_OVER])
+                self.q_eval([node for node in root_node.principal_variation.children.values()
+                                if node.game_status == GameState.NOT_OVER and not node.has_children()])
 
             self.q_eval_top_leaves(leaf_nodes, fraction_q=0.1, min_eval_q=k)
             next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=k * 3, num_leaves=k)

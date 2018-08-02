@@ -22,16 +22,16 @@ import time
 
 SIZE = 7
 WIN_CHAIN_LENGTH = 5
-CHANNELS = 20
+CHANNELS = 4
 EPOCHS = 100
 BATCH_SIZE = 100
 GAME_BATCH = 500
 
 VECTORS_NPZ = 'gomoku/models/waiting_vectors.npz'
-VECTORS_COMPLETE = 'gomoku/models/waiting_vectors_complete_5'
+VECTORS_COMPLETE = 'gomoku/models/waiting_vectors_complete_6'
 P_MODEL = "gomoku/models/waiting_p.model"
 Q_MODEL = "gomoku/models/waiting_q.model"
-MODEL_COMPLETE = 'gomoku/models/waiting_models_complete_5'
+MODEL_COMPLETE = 'gomoku/models/waiting_models_complete_6'
 
 PATIENCE = 3
 
@@ -87,11 +87,15 @@ def train_model(npz):
     
     q_model.save(Q_MODEL)
     p_model.save(P_MODEL)
-    
+
     with open(MODEL_COMPLETE, 'w') as f:
         f.write('')
     
     print('Models Complete')
+    
+    del q_model
+    del p_model
+    
 
 
 # In[ ]:
