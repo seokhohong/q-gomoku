@@ -2,6 +2,7 @@
 from learner import pqmind
 from learner import pexp_mind
 from core import detail_board
+from core import board
 from numpy.random import RandomState
 
 rs = RandomState(42)
@@ -9,12 +10,12 @@ rs = RandomState(42)
 import random
 
 SIZE = 7
-CHANNELS = 20
+CHANNELS = 4
 
 if __name__ == "__main__":
-    mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=20)
-    mind.load_net('../models/7_20')
-    round_board = detail_board.Board(size=SIZE, win_chain_length=5)
+    mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=CHANNELS)
+    mind.load_net('../models/7_4_2')
+    round_board = board.Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
     for j in range(rs.randint(0, 10)):
@@ -46,9 +47,9 @@ if __name__ == "__main__":
         else:
             print('Computer is thinking...')
             possible_moves = mind.pvs_best_moves(round_board,
-                                    max_depth=20,
-                                    max_iters=20,
-                                    k=SIZE ** 2)
+                                                required_depth=5,
+                                                max_iters=20,
+                                                k=SIZE ** 2)
             picked_move, picked_node = possible_moves[0]
             # add training example assuming best move
             move, best_node = possible_moves[0]
