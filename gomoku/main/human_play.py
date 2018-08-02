@@ -14,7 +14,7 @@ CHANNELS = 4
 
 if __name__ == "__main__":
     mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=CHANNELS)
-    mind.load_net('../models/7_4_2')
+    mind.load_net('../models/7_4_3')
     round_board = board.Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
@@ -48,7 +48,7 @@ if __name__ == "__main__":
             print('Computer is thinking...')
             possible_moves = mind.pvs_best_moves(round_board,
                                                 required_depth=5,
-                                                max_iters=20,
+                                                max_iters=30,
                                                 k=SIZE ** 2)
             picked_move, picked_node = possible_moves[0]
             # add training example assuming best move
