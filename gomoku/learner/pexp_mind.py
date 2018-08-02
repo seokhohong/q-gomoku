@@ -76,16 +76,16 @@ class PExpMind:
         conv_2 = Convolution2D(32, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn2)
         bn3 = BatchNormalization()(conv_2)
-        #conv_3 = Convolution2D(16, (3, 3), padding='same', activation='relu',
-        #                       kernel_initializer='random_normal', use_bias=False)(bn3)
-        #bn4 = BatchNormalization()(conv_3)
-        #conv_4 = Convolution2D(8, (3, 3), padding='same', activation='relu',
-        #                       kernel_initializer='random_normal', use_bias=False)(bn4)
-        #bn5 = BatchNormalization()(conv_4)
+        conv_3 = Convolution2D(16, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn3)
+        bn4 = BatchNormalization()(conv_3)
+        conv_4 = Convolution2D(8, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn4)
+        bn5 = BatchNormalization()(conv_4)
 
-        flat = Flatten()(bn3)
+        flat = Flatten()(bn5)
 
-        hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        hidden = Dense(self.size ** 2, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
         bn_final = BatchNormalization()(hidden)
 
         out = Dense(self.size ** 2, activation='softmax')(bn_final)
@@ -192,7 +192,7 @@ class PExpMind:
         while i < max_iters or len(root_node.principal_variation.full_move_list) < required_depth:
             i += 1
 
-            if i > max_iters * 10:
+            if i > max_iters * 5:
                 break
 
             # p search
