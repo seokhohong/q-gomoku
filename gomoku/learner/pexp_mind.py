@@ -21,6 +21,9 @@ class PExpMind:
         if self.size == 7:
             self.value_est = self.value_model_7()
             self.policy_est = self.policy_model_7()
+        elif self.size == 9:
+            self.value_est = self.value_model_9()
+            self.policy_est = self.policy_model_9()
         else:
             self.value_est = self.get_value_model()
             self.policy_est = self.get_policy_model()
@@ -66,6 +69,29 @@ class PExpMind:
 
         return model
 
+    def value_model_9(self):
+        inp = Input(shape=(self.size, self.size, self.channels))
+
+        # key difference between this and conv network is padding
+        conv_1 = Convolution2D(64, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(inp)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
+        bn3 = BatchNormalization()(conv_2)
+
+        flat = Flatten()(bn3)
+
+        hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        bn_final = BatchNormalization()(hidden)
+
+        out = Dense(1, use_bias=False)(bn_final)
+
+        model = Model(inputs=[inp], outputs=out)
+        model.compile(loss=losses.mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
+
+        return model
+    
     def policy_model_7(self):
         inp = Input(shape=(self.size, self.size, self.channels))
 
@@ -95,6 +121,39 @@ class PExpMind:
 
         return model
 
+        
+    def policy_model_9(self):
+        inp = Input(shape=(self.size, self.size, self.channels))
+
+        # key difference between this and conv network is padding
+        conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(inp)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
+        bn3 = BatchNormalization()(conv_2)
+        conv_3 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn3)
+        bn4 = BatchNormalization()(conv_3)
+        conv_4 = Convolution2D(32, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn4)
+        bn5 = BatchNormalization()(conv_4)
+        conv_5 = Convolution2D(16, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn5)
+        bn6 = BatchNormalization()(conv_5)
+
+        flat = Flatten()(bn6)
+
+        hidden = Dense(self.size ** 2, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        bn_final = BatchNormalization()(hidden)
+
+        out = Dense(self.size ** 2, activation='softmax')(bn_final)
+
+        model = Model(inputs=[inp], outputs=out)
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+        return model
+    
     def get_value_model(self):
         inp = Input(shape=(self.size, self.size, self.channels))
 

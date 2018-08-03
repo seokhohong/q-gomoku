@@ -107,5 +107,4 @@ while True:
     npz = np.load(VECTORS_NPZ)
     train_model(npz)
     os.remove(VECTORS_COMPLETE)
-    os.remove(VECTORS_NPZ)
 

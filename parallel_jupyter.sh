@@ -45,5 +45,5 @@ pyspark \
   --files /opt/mapr/spark/spark-2.1.0/conf/hive-site.xml  \
   --executor-cores $cores \
   --properties-file jupyter.conf \
-  --conf "spark.executor.memory=4g"
+  --conf "spark.executor.memory=7g"
 
