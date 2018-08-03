@@ -248,15 +248,23 @@ class PExpMind:
 
         explored_states = 1
         i = 0
+        MAXED_DURATION = 5
+
+        principal_qs = []
         while i < max_iters or len(root_node.principal_variation.full_move_list) < required_depth:
             i += 1
 
+            # eternal loop just in case
             if i > max_iters * 5:
                 break
 
-            # game over
-            if root_node.principal_variation and root_node.principal_variation.game_status is not GameState.NOT_OVER:
-                break
+            # searching doesn't get us anywhere for awhile
+            if root_node.principal_variation and root_node.principal_variation.q:
+                principal_qs.append(root_node.principal_variation.q)
+                if len(principal_qs) > MAXED_DURATION and np.abs(np.mean(principal_qs[-MAXED_DURATION : -1])) == 1:
+                    print('Maxed Duration')
+                    break
+
 
             # p search
             self.p_expand(board, principal_variations)

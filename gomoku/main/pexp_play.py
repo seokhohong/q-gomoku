@@ -47,18 +47,18 @@ def run():
         print('Game', i)
 
         # randomize the board a bit
-        #for j in range(rs.randint(0, 10)):
-        #    round_board.make_random_move()
-        round_board.move(2, 2)
-        round_board.move(0, 1)
-        round_board.move(2, 3)
-        round_board.move(2, 1)
-        round_board.move(2, 4)
-        round_board.move(3, 1)
-        round_board.move(4, 3)
-        round_board.move(3, 4)
-        round_board.move(6, 6)
-        round_board.move(4, 1)
+        for j in range(rs.randint(0, 10)):
+            round_board.make_random_move()
+        #round_board.move(2, 2)
+        #round_board.move(0, 1)
+        #round_board.move(2, 3)
+        #round_board.move(2, 1)
+        #round_board.move(2, 4)
+        #round_board.move(3, 1)
+        #round_board.move(4, 3)
+        #round_board.move(3, 4)
+        #round_board.move(6, 6)
+        #round_board.move(4, 1)
 
         print(round_board)
         current_player = round_board.player_to_move
@@ -75,19 +75,18 @@ def run():
                                     epsilon=0.1,
                                     required_depth=4,
                                     k=SIZE ** 2,
-                                    max_iters=10,
-                                    max_eval_q=500,
+                                    max_iters=30,
                                     )
             print(round_board.pprint())
             current_player = -current_player
             if result:
                 break
-            #return
+            return
 
         print('done')
 if __name__ == "__main__":
-    run()
-    '''
+    #run()
+
     import cProfile, pstats
     from io import StringIO
 
@@ -100,4 +99,3 @@ if __name__ == "__main__":
     ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
     ps.print_stats()
     print(s.getvalue())
-    '''

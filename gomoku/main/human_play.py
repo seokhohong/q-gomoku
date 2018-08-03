@@ -9,12 +9,12 @@ rs = RandomState(42)
 
 import random
 
-SIZE = 7
+SIZE = 9
 CHANNELS = 4
 
 if __name__ == "__main__":
     mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=CHANNELS)
-    mind.load_net('../models/7_4_3')
+    mind.load_net('../models/9_4')
     round_board = board.Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
