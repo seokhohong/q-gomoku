@@ -439,7 +439,7 @@ class PExpMind:
 
     # with epsilon probability will select random move
     # returns whether game has concluded or not
-    def make_move(self, board, as_player, verbose=True, epsilon=0.1, required_depth=5, max_iters=10, k=25, fraction_q=0.25, max_eval_q=np.inf):
+    def make_move(self, board, as_player, verbose=True, epsilon=0.1, required_depth=5, max_iters=10, k=25):
         current_q = self.q(board)
         assert(as_player == board.player_to_move)
 
@@ -447,9 +447,7 @@ class PExpMind:
         possible_moves = self.pvs_best_moves(board,
                                              max_iters=max_iters,
                                              k=k,
-                                             required_depth=required_depth,
-                                             fraction_q=fraction_q,
-                                             max_eval_q=max_eval_q)
+                                             required_depth=required_depth)
 
         # best action is 0th index
         picked_action = 0
