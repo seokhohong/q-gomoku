@@ -63,15 +63,7 @@ def train_model(npz):
     train_q_vectors = npz['train_q_vectors']
     train_p = npz['train_p']
     train_q = npz['train_q']
-    
-    positional = np.abs(train_q) < 0.5
-    positional_q_vectors = train_q_vectors[positional]
-    positional_q = train_q[positional]
-    
-    if len(positional_q_vectors) > 0:
-        train_q_vectors = positional_q_vectors
-        train_q = positional_q
-    
+
     print('Num p', len(train_p_vectors))
     print('Num q', len(train_q_vectors))
 
