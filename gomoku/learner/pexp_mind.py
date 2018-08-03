@@ -235,11 +235,11 @@ class PExpMind:
     # board perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
 
-    def pvs_best_moves(self, board, max_iters=10, k=25, required_depth=5, fraction_q=0.25, max_eval_q=10):
+    def pvs_best_moves(self, board, max_iters=10, k=25, required_depth=5):
         is_maximizing = True if board.player_to_move == 1 else False
         root_node = optimized_minimax.PExpNode(parent=None,
-                                    is_maximizing=is_maximizing,
-                                    full_move_list=optimized_minimax.MoveList(moves=()))
+                                                is_maximizing=is_maximizing,
+                                                full_move_list=optimized_minimax.MoveList(moves=()))
 
         principal_variations = [root_node]
 
@@ -252,6 +252,10 @@ class PExpMind:
             i += 1
 
             if i > max_iters * 5:
+                break
+
+            # game over
+            if root_node.principal_variation and root_node.principal_variation.game_status is not GameState.NOT_OVER:
                 break
 
             # p search
@@ -273,7 +277,7 @@ class PExpMind:
                 self.q_eval([node for node in root_node.principal_variation.children.values()
                                 if node.game_status == GameState.NOT_OVER and not node.has_children()])
 
-            self.q_eval_top_leaves(leaf_nodes, fraction_q=0.1, min_eval_q=k)
+            self.q_eval_top_leaves(leaf_nodes, min_eval_q=k, max_eval_q=k * 3)
             next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=k * 3, num_leaves=k)
 
             next_pvs_set = set(next_pvs)
@@ -337,9 +341,9 @@ class PExpMind:
         for parent in parents_to_update:
             parent.recalculate_q()
 
-    def q_eval_top_leaves(self, leaf_nodes, fraction_q, min_eval_q=10, max_eval_q=1000):
+    def q_eval_top_leaves(self, leaf_nodes, min_eval_q=10, max_eval_q=1000):
         # will only contain leaves of games not being over
-        number_eval = min(max(min_eval_q, int(fraction_q * len(leaf_nodes))), len(leaf_nodes), max_eval_q)
+        number_eval = min(max(min_eval_q, len(leaf_nodes)), max_eval_q)
         best_leaves = list(leaf_nodes.islice(0, number_eval))
         self.q_eval(best_leaves)
 
@@ -392,6 +396,7 @@ class PExpMind:
             # unwind parent
             for i in range(len(parent.full_move_list)):
                 board.unmove()
+
         # for game completed states
         for parent in parents_to_recalc:
             parent.recalculate_q()
