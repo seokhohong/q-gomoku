@@ -78,24 +78,27 @@ def run():
                                     max_iters=30,
                                     )
             print(round_board.pprint())
-            current_player = -current_player
+            if current_player == Board.FIRST_PLAYER:
+                current_player = Board.SECOND_PLAYER
+            else:
+                current_player = Board.FIRST_PLAYER
             if result:
                 break
-            return
+            #return
 
         print('done')
 if __name__ == "__main__":
-    #run()
-
-    import cProfile, pstats
-    from io import StringIO
-
-    pr = cProfile.Profile()
-    pr.enable()
     run()
-    pr.disable()
-    s = StringIO()
-    sortby = 'cumulative'
-    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    ps.print_stats()
-    print(s.getvalue())
+
+    # import cProfile, pstats
+    # from io import StringIO
+    #
+    # pr = cProfile.Profile()
+    # pr.enable()
+    # run()
+    # pr.disable()
+    # s = StringIO()
+    # sortby = 'cumulative'
+    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    # ps.print_stats()
+    # print(s.getvalue())
