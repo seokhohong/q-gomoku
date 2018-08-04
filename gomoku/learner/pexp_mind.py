@@ -428,7 +428,7 @@ class PExpMind:
                         # the player who last move won!
                         if len(child.full_move_list.moves) == 1:
                             print('win now')
-                        winning_q = PExpNode.MAX_Q if board.player_to_move == Board.FIRST_PLAYER else PExpNode.MIN_Q
+                        winning_q = PExpNode.MIN_Q if board.player_to_move == Board.FIRST_PLAYER else PExpNode.MAX_Q
                         child.assign_q(winning_q, GameState.WON)
 
                     elif board.game_drawn():
