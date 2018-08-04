@@ -116,6 +116,7 @@ class PExpNode:
 
         # for a leaf node, the principal variation is itself
         self.q = q
+        assert(q <= PExpNode.MAX_Q and q >= PExpNode.MIN_Q)
         self.principal_variation = self
         assert(not self.assigned_q)
         self.assigned_q = True
@@ -144,7 +145,7 @@ class PExpNode:
         self.log_local_p = log_p
         self.log_total_p = self.parent.log_total_p + self.log_local_p
         self.p_assigned = True
-        self.p_comparator = int((-self.log_total_p) * 1E6)
+        self.p_comparator = int((min(-self.log_total_p, 100)) * 1E6)
 
     def recalculate_q(self, verbose=False):
         # take the largest (or smallest) q across all seen moves
