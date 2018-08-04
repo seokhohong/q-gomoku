@@ -11,7 +11,9 @@ from sortedcontainers import SortedSet
 from sortedcontainers import SortedList
 
 from core.board import GameState
+from core.board import Board
 from core import optimized_minimax
+from core.optimized_minimax import PExpNode
 
 
 class PExpMind:
@@ -240,7 +242,7 @@ class PExpMind:
         # all nodes at the leaves of the search tree
         leaf_nodes = SortedList(principal_variations, key=lambda x: x.p_comparator)
 
-        assert(len(leaf_nodes) == len(set(leaf_nodes)))
+        #assert(len(leaf_nodes) == len(set(leaf_nodes)))
 
         explored_states = 1
         i = 0
@@ -317,9 +319,9 @@ class PExpMind:
                 # print("New PV", root_node.principal_variation)
 
             # this check doesn't hold if we do PV Q extensions
-            if root_node.principal_variation:
-                #root_node.top_down_q()
-                assert(abs(root_node.principal_variation.q - root_node.negamax()[0]) < 1E-4)
+            #if root_node.principal_variation:
+            #    root_node.top_down_q()
+            #    assert(abs(root_node.principal_variation.q - root_node.negamax()[0]) < 1E-4)
 
             # if we have a PV, add it to expand
             if root_node.principal_variation and root_node.principal_variation.game_status == GameState.NOT_OVER:
@@ -426,7 +428,8 @@ class PExpMind:
                         # the player who last move won!
                         if len(child.full_move_list.moves) == 1:
                             print('win now')
-                        child.assign_q(-board.player_to_move, GameState.WON)
+                        winning_q = PExpNode.MAX_Q if board.player_to_move == Board.FIRST_PLAYER else PExpNode.MIN_Q
+                        child.assign_q(winning_q, GameState.WON)
 
                     elif board.game_drawn():
                         child.assign_q(0, GameState.DRAW)

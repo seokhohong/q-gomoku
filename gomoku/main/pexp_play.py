@@ -58,7 +58,7 @@ def run():
         round_board.move(4, 3)
         round_board.move(3, 4)
         round_board.move(6, 6)
-        round_board.move(4, 1)
+        #round_board.move(4, 1)
 
         print(round_board)
         current_player = round_board.player_to_move

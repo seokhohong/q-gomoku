@@ -1,7 +1,6 @@
 
 from learner import pqmind
 from learner import pexp_mind
-from core import detail_board
 from core import board
 from numpy.random import RandomState
 
@@ -24,7 +23,7 @@ if __name__ == "__main__":
     print(round_board.guide_print())
 
     while True:
-        if round_board.player_to_move == 1:
+        if round_board.player_to_move == board.Board.FIRST_PLAYER:
             inp = input("Input your move (i.e. \"3 5\"): ")
             if len(inp.split(' ')) != 2:
                 print('Incorrect number of coordinates, please try again!')
