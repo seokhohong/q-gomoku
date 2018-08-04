@@ -248,6 +248,8 @@ class PExpMind:
         i = 0
         MAXED_DURATION = 5
 
+        previously_removed = set()
+
         principal_qs = []
         while i < max_iters or len(root_node.principal_variation.full_move_list) < required_depth:
             i += 1
@@ -267,7 +269,7 @@ class PExpMind:
 
             current_leaves = len(leaf_nodes)
             # p search
-            self.p_expand(board, principal_variations, leaf_nodes, transposition_table)
+            self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed)
 
             # new states
             explored_states += len(leaf_nodes) - current_leaves
@@ -391,15 +393,13 @@ class PExpMind:
         self.q_eval(best_leaves)
 
     accessed_transposition = 0
-    previously_removed = set()
-    def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table):
-
+    def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table, previously_removed):
         for parent in nodes_to_expand:
-            assert(parent not in PExpMind.previously_removed)
+            assert(parent not in previously_removed)
             # should NOT be expanding any non-leaf node
             assert(parent in leaf_nodes)
             leaf_nodes.remove(parent)
-            PExpMind.previously_removed.add(parent)
+            previously_removed.add(parent)
 
             for move in parent.full_move_list.moves:
                 board.blind_move(move[0], move[1])
@@ -435,7 +435,7 @@ class PExpMind:
                         child.assign_q(0, GameState.DRAW)
 
                     else:
-                        assert (child not in PExpMind.previously_removed)
+                        assert (child not in previously_removed)
                         new_leaves.append(child)
                         child.set_matrix(board.get_matrix())
 
