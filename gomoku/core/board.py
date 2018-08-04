@@ -21,10 +21,8 @@ class Board:
     player_to_move: int
     NO_PLAYER = 0
     FIRST_PLAYER = 1
-    SECOND_PLAYER = -1
+    SECOND_PLAYER = 2
     TURN_INFO_INDEX = 3
-    FIRST_PLAYER_INDEX = 1
-    SECOND_PLAYER_INDEX = 2
 
     def __init__(self, size=5, win_chain_length=3):
         self.size = size
@@ -32,6 +30,9 @@ class Board:
         # three for No Player, Player 1, Player 2, one for turn index
         self.matrix = np.zeros((self.size, self.size, 4))
         self.matrix[:, :, Board.NO_PLAYER].fill(1)
+
+        # tracks which player played which spot (optimization
+        self.which_stone = np.zeros((self.size, self.size), dtype=np.int)
 
         self.win_chain_length = win_chain_length
         # store (x, y, player) tuple
@@ -54,19 +55,20 @@ class Board:
 
     def unmove(self):
         previous_move = self.ops.pop()
-        if previous_move.player == Board.FIRST_PLAYER:
-            self.matrix[previous_move.x, previous_move.y, Board.FIRST_PLAYER_INDEX] = 0
-        else:
-            self.matrix[previous_move.x, previous_move.y, Board.SECOND_PLAYER_INDEX] = 0
 
+        self.matrix[previous_move.x, previous_move.y, previous_move.player] = 0
         self.matrix[previous_move.x, previous_move.y, Board.NO_PLAYER] = 1
+        self.which_stone[previous_move.x, previous_move.y] = Board.NO_PLAYER
 
         self.available_moves.add((previous_move.x, previous_move.y))
         self.flip_player_to_move()
         self.game_state = GameState.NOT_OVER
 
     def get_matrix(self):
-        self.matrix[:, :, Board.TURN_INFO_INDEX].fill(self.player_to_move)
+        if self.player_to_move == Board.FIRST_PLAYER:
+            self.matrix[:, :, Board.TURN_INFO_INDEX].fill(1)
+        else:
+            self.matrix[:, :, Board.TURN_INFO_INDEX].fill(-1)
         return np.copy(self.matrix)
 
     def get_rotated_matrices(self):
@@ -106,19 +108,20 @@ class Board:
     def get_rotated_point(self, index):
         return self.cached_point_rotations[index]
 
-    def move(self, x, y):
+    def blind_move(self, x, y):
         assert(self.game_state is GameState.NOT_OVER)
         self.ops.append(Move(self.player_to_move, x, y))
 
-        if self.player_to_move == Board.FIRST_PLAYER:
-            self.matrix[x, y, Board.FIRST_PLAYER_INDEX] = 1
-        else:
-            self.matrix[x, y, Board.SECOND_PLAYER_INDEX] = 1
+        self.matrix[x, y, self.player_to_move] = 1
+        self.which_stone[x, y] = self.player_to_move
 
         self.matrix[x, y, Board.NO_PLAYER] = 0
 
         self.available_moves.remove((x, y))
         self.flip_player_to_move()
+
+    def move(self, x, y):
+        self.blind_move(x, y)
         self.compute_game_state()
 
     def make_random_move(self):
@@ -152,15 +155,8 @@ class Board:
     def in_bounds(self, x, y):
         return 0 <= x < self.size and 0 <= y < self.size
 
-    def center_stone(self, x, y):
-        if int(self.matrix[x, y, Board.FIRST_PLAYER_INDEX]) == 1:
-            return Board.FIRST_PLAYER_INDEX
-        if int(self.matrix[x, y, Board.SECOND_PLAYER_INDEX]) == 1:
-            return Board.SECOND_PLAYER_INDEX
-        return Board.NO_PLAYER
-
     def chain_length(self, center_x, center_y, delta_x, delta_y):
-        center_stone = self.center_stone(center_x, center_y)
+        center_stone = self.which_stone[center_x, center_y]
         if center_stone == Board.NO_PLAYER:
             return 0
         chain_length = 1
@@ -194,11 +190,11 @@ class Board:
             move = utils.peek_stack(self.ops)
             if move:
                 was_last_move = (x == move.x and y == move.y)
-                if self.matrix[x, y, Board.FIRST_PLAYER_INDEX] == 1:
+                if self.matrix[x, y, Board.FIRST_PLAYER] == 1:
                     if was_last_move:
                         return 'X'
                     return 'x'
-                elif self.matrix[x, y, Board.SECOND_PLAYER_INDEX] == 1:
+                elif self.matrix[x, y, Board.SECOND_PLAYER] == 1:
                     if was_last_move:
                         return 'O'
                     return 'o'
@@ -216,11 +212,11 @@ class Board:
             move = utils.peek_stack(self.ops)
             if move:
                 was_last_move = (x == move.x and y == move.y)
-                if self.matrix[x, y, Board.FIRST_PLAYER_INDEX] == 1:
+                if self.matrix[x, y, Board.FIRST_PLAYER] == 1:
                     if was_last_move:
                         return 'X'
                     return 'x'
-                elif self.matrix[x, y, Board.SECOND_PLAYER_INDEX] == 1:
+                elif self.matrix[x, y, Board.SECOND_PLAYER] == 1:
                     if was_last_move:
                         return 'O'
                     return 'o'

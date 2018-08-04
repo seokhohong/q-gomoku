@@ -22,6 +22,9 @@ class MoveList:
     def __len__(self):
         return len(self.moves)
 
+    def transposition_hash(self):
+        return tuple(sorted([(i % 2, move) for i, move in enumerate(self.moves)]))
+
 # P expansion node
 class PExpNode:
     MAX_Q = 1
@@ -47,11 +50,17 @@ class PExpNode:
 
         self.principal_variation = None
         self.q = PExpNode.UNASSIGNED_Q
+        self.assigned_q = False
 
         # log likelihood of playing this move given parent state
         self.log_local_p = 0
         # log likelihood of playing this move given root board state (used for PVS search)
         self.log_total_p = 0
+        # log_total_p converted to integer that's easy to sort
+        self.p_comparator = 0
+
+        # only allowed to set once
+        self.p_assigned = False
 
         # the quality of this move
         self.move_goodness = 0
@@ -67,12 +76,31 @@ class PExpNode:
     def has_children(self):
         return len(self.children) > 0
 
+    # def __lt__(self, other):
+    #     return self.log_total_p > other.log_total_p
+    #
+    # def __gt__(self, other):
+    #     return self.log_total_p < other.log_total_p
+
+
+    transposition_access = 0
+
     # note this does NOT compute q for child
-    def create_child(self, move):
-        child = PExpNode(parent=self,
-                        is_maximizing=not self.is_maximizing,
-                        full_move_list=self.full_move_list.append(move))
-        self.children[move] = child
+    def create_child(self, move, transposition_table):
+        new_move_list = self.full_move_list.append(move)
+
+        transposition_hash = new_move_list.transposition_hash()
+
+        child = None
+        if transposition_hash in transposition_table:
+            PExpNode.transposition_access += 1
+        else:
+            child = PExpNode(parent=self,
+                            is_maximizing=not self.is_maximizing,
+                            full_move_list=new_move_list)
+            transposition_table.add(transposition_hash)
+            # only build if not in transposition
+            self.children[move] = child
         return child
 
     def get_sorted_moves(self):
@@ -89,6 +117,10 @@ class PExpNode:
         # for a leaf node, the principal variation is itself
         self.q = q
         self.principal_variation = self
+        assert(not self.assigned_q)
+        self.assigned_q = True
+
+        #self.recalculate_q()
 
         self.assign_move_goodness()
 
@@ -107,158 +139,128 @@ class PExpNode:
         return True
 
     def assign_p(self, log_p):
+        assert(self.log_local_p >= 0)
+        assert(not self.p_assigned)
         self.log_local_p = log_p
         self.log_total_p = self.parent.log_total_p + self.log_local_p
+        self.p_assigned = True
+        self.p_comparator = int((-self.log_total_p) * 1E6)
 
-    def recalculate_q(self):
+    def recalculate_q(self, verbose=False):
         # take the largest (or smallest) q across all seen moves
 
         # if this node is still a leaf, break
         if len(self.children) == 0:
             return
 
-        if self.q is not PExpNode.UNASSIGNED_Q:
-            prev_q = self.q
-        else:
-            prev_q = np.inf
-
-        valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
+        valid_children = [tup for tup in self.children.items() if tup[1].assigned_q]
 
         if len(valid_children) == 0:
             return
 
         if self.is_maximizing:
-            best_move = max(valid_children, key=lambda x : x[1].move_goodness)[0]
+            best_move = max(valid_children, key=lambda x: x[1].move_goodness)[0]
         else:
-            best_move = min(valid_children, key=lambda x : x[1].move_goodness)[0]
+            best_move = min(valid_children, key=lambda x: x[1].move_goodness)[0]
+
+        if verbose:
+            print('Recalculate Q for', self.full_move_list.moves)
+            print('Previous', self.principal_variation)
 
         # using negamax framework
         self.principal_variation = self.children[best_move].principal_variation
+
+        if verbose:
+            print("To", self.children[best_move].principal_variation)
+
         self.q = self.children[best_move].q
 
         self.assign_move_goodness()
 
-        if self.parent and abs(prev_q - self.q) > 1E-6:
+        if self.parent:
             # update pvs for parent
-            self.parent.recalculate_q()
+            self.parent.recalculate_q(verbose=verbose)
+
+    # DEBUGGING METHODS
+    def recursive_children(self, include_game_end=False):
+        leaves = []
+        for child in self.children.values():
+            if child.has_children():
+                leaves.extend(child.recursive_children())
+            else:
+                if not include_game_end and child.game_status == GameState.NOT_OVER\
+                        or include_game_end:
+                    leaves.append(child)
+        return leaves
+
+    # Assert consistency
+    def consistent_pv(self):
+        if self.has_children():
+            valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
+            if len(valid_children) == 0:
+                return
+            if self.is_maximizing:
+                best_move = max(valid_children, key=lambda x: x[1].move_goodness)[0]
+            else:
+                best_move = min(valid_children, key=lambda x: x[1].move_goodness)[0]
+
+            # using negamax framework
+            if self.principal_variation != self.children[best_move].principal_variation:
+                self.recalculate_q()
+            assert(self.principal_variation.log_total_p < 0)
+            assert (self.principal_variation.log_local_p < 0)
+
+            for child in self.children.values():
+                child.consistent_pv()
+
+    def top_down_q(self):
+        valid_children = [tup for tup in self.children.items() if tup[1].q]
+        if len(valid_children) == 0:
+            return
+
+        for _, child in valid_children:
+            child.top_down_q()
+
+        if self.is_maximizing:
+            best_move = max(valid_children, key=lambda x: x[1].move_goodness)[0]
+        else:
+            best_move = min(valid_children, key=lambda x: x[1].move_goodness)[0]
+
+        self.principal_variation = self.children[best_move].principal_variation
+        self.q = self.children[best_move].q
+
+    def negamax(self):
+        valid_children = [tup for tup in self.children.items() if tup[1].q]
+        if len(valid_children) == 0:
+            return self.q, self
+
+        best_child = None
+        if self.is_maximizing:
+            value = -np.inf
+            for move, child in valid_children:
+                child_value, next_child = child.negamax()
+                assert(abs(child_value - next_child.principal_variation.q) < 1E-4)
+                if child_value > value:
+                    best_child = next_child
+                    value = child_value
+        else:
+            value = np.inf
+            for move, child in valid_children:
+                child_value, next_child = child.negamax()
+                assert (abs(child_value - next_child.principal_variation.q) < 1E-4)
+                if child_value < value:
+                    best_child = next_child
+                    value = child_value
+
+        return value, best_child
 
     @classmethod
     # whether the q is from a game result (as opposed to an approximation of game state)
     def is_result_q(cls, q, epsilon=1E-7):
-        return abs(q) > PVSNode.MAX_Q - epsilon or abs(q) < epsilon
+        return abs(q) > PExpNode.MAX_Q - epsilon or abs(q) < epsilon
 
     def __str__(self):
         if self.principal_variation:
             return ("PV: " + str(self.principal_variation.full_move_list.moves) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.log_total_p)
         else:
             return "Position: " + str(self.full_move_list.moves) + " P: {0:.4f}".format(self.log_total_p)
-
-# principal value search
-class PVSNode:
-    MAX_Q = 1
-    # largest Q allowed by model prediction (MAX_Q is a minimax certified win)
-    MAX_MODEL_Q = 0.99
-    MIN_Q = -1
-    MIN_MODEL_Q = -0.99
-
-    def __init__(self, parent, is_maximizing, full_move_list):
-
-        # parent TreeNode
-        self.parent = parent
-        # full move tree
-        self.full_move_list = full_move_list
-
-        self.is_maximizing = is_maximizing
-        # is the game over with this move list
-        self.game_status = GameState.NOT_OVER
-        # for debugging
-        # key is move
-        self.children = {}
-
-        # tuple of PVSNode, q
-        self.principal_variation = None
-        self.q = None
-
-        # log likelihood of playing this move given parent state
-        self.log_local_p = 0
-        # log likelihood of playing this move given root board state (used for PVS search)
-        self.log_total_p = 0
-
-        # the quality of this move
-        self.move_goodness = 0
-
-    def has_children(self):
-        return len(self.children) > 0
-
-    # note this does NOT compute q for child
-    def create_child(self, move):
-        child = PVSNode(parent=self,
-                        is_maximizing=not self.is_maximizing,
-                        full_move_list=self.full_move_list.append(move))
-        self.children[move] = child
-        return child
-
-    def get_sorted_moves(self):
-        return sorted(self.children.items(), key=lambda x: x[1].move_goodness, reverse=self.is_maximizing)
-
-    # used ONLY for leaf assignment
-    def assign_q(self, q, game_status):
-        assert (len(self.children) == 0)
-
-        # mark game status
-        self.game_status = game_status
-
-        # for a leaf node, the principal variation is itself
-        self.principal_variation = self
-        self.q = q
-
-        self.assign_move_goodness()
-
-    def assign_move_goodness(self):
-        # play shorter sequences if advantageous, otherwise play longer sequences
-        if self.q > 0:
-            self.move_goodness = self.q - len(self.principal_variation.full_move_list) * 0.001
-        else:
-            self.move_goodness = self.q + len(self.principal_variation.full_move_list) * 0.001
-
-    def assign_p(self, log_p):
-        self.log_local_p = log_p
-        self.log_total_p = self.parent.log_total_p + self.log_local_p
-
-    def recalculate_q(self):
-        # take the largest (or smallest) q across all seen moves
-
-        # if this node is still a leaf, break
-        if len(self.children) == 0:
-            return
-
-        if self.principal_variation:
-            prev_q = self.q
-        else:
-            prev_q = np.inf
-
-        if self.is_maximizing:
-            best_move = max(self.children.items(), key=lambda x : x[1].move_goodness)[0]
-        else:
-            best_move = min(self.children.items(), key=lambda x : x[1].move_goodness)[0]
-
-        # using negamax framework
-        self.principal_variation = self.children[best_move].principal_variation
-        self.q = self.children[best_move].q
-
-        self.assign_move_goodness()
-
-        if self.parent and abs(prev_q - self.q) > 1E-6:
-            # update pvs for parent
-            self.parent.recalculate_q()
-
-    @classmethod
-    # whether the q is from a game result (as opposed to an approximation of game state)
-    def is_result_q(cls, q, epsilon=1E-7):
-        return abs(q) > PVSNode.MAX_Q - epsilon or abs(q) < epsilon
-
-    def __str__(self):
-        if self.principal_variation:
-            return ("PV: " + str(self.principal_variation.full_move_list.moves) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.log_total_p)
-        else:
-            return "Position: " + str(self.full_move_list.moves)
