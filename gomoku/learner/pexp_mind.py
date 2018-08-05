@@ -17,10 +17,11 @@ from core.optimized_minimax import PExpNode
 
 
 class PExpMind:
-    def __init__(self, size, alpha, init=True, channels=1):
+    def __init__(self, size, alpha, init=True, channels=1, debug=True):
 
         self.size = size
         self.channels = channels
+        self.debug = debug
 
         if self.size == 7:
             self.value_est = self.value_model_7()
@@ -287,18 +288,16 @@ class PExpMind:
 
             next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=k * 3, num_leaves=k)
 
-            next_pvs_set = set(next_pvs)
-            for node in principal_variations:
-                if node and node not in next_pvs_set and node == GameState.NOT_OVER:
-                    next_pvs.append(node)
+            principal_variations.extend(next_pvs)
 
             #root_node.consistent_pv()
             #root_node.principal_variation.recalculate_q()
-            if root_node.principal_variation and root_node.principal_variation.has_children():
+            if root_node.principal_variation:
                 # each of these nodes will be a leaf with P=0, making them evaluated next time around
-                print('pv Q extension')
-                self.q_eval([node for node in root_node.principal_variation.children.values()
-                             if node.game_status == GameState.NOT_OVER and not node.has_children()])
+                while root_node.principal_variation.has_children():
+                    print('pv Q extension')
+                    self.q_eval([node for node in root_node.principal_variation.children.values()
+                                 if node.game_status == GameState.NOT_OVER and not node.has_children()])
                 # print('PV Has Children', root_node.principal_variation)
                 # prev_pv = root_node.principal_variation
                 #
@@ -327,22 +326,16 @@ class PExpMind:
 
             # if we have a PV, add it to expand
             if root_node.principal_variation and root_node.principal_variation.game_status == GameState.NOT_OVER:
-                if not root_node.principal_variation.has_children():
-                    next_pvs.append(root_node.principal_variation)
+                assert(root_node.principal_variation not in previously_removed)
+                principal_variations.append(root_node.principal_variation)
 
-            principal_variations.extend(next_pvs)
-            print('Before', len(principal_variations))
             principal_variations = set(principal_variations)
-            print('After', len(principal_variations))
 
             print('Root', root_node.principal_variation)
 
         print('Explored ' + str(explored_states) + " States in " + str(i) + " Iterations")
 
         possible_moves = root_node.get_sorted_moves()
-
-        if len(possible_moves) == 0:
-            print('what')
 
         for move, q in possible_moves:
             node = root_node.children[move]
