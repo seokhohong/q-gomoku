@@ -37,7 +37,11 @@ class PExpNode:
     def __init__(self, parent, is_maximizing, full_move_list):
 
         # parent TreeNode
-        self.parent = parent
+        self.is_root = parent is None
+
+        # with transposition, can have multiple parents
+        self.parents = [parent]
+
         # full move tree
         self.full_move_list = full_move_list
 
@@ -90,18 +94,21 @@ class PExpNode:
         new_move_list = self.full_move_list.append(move)
 
         transposition_hash = new_move_list.transposition_hash()
-
+        child_found = transposition_hash in transposition_table
         child = None
-        if transposition_hash in transposition_table:
+        if child_found:
             PExpNode.transposition_access += 1
+            child = transposition_table[transposition_hash]
+            child.parents.append(self)
         else:
             child = PExpNode(parent=self,
                             is_maximizing=not self.is_maximizing,
                             full_move_list=new_move_list)
-            transposition_table.add(transposition_hash)
-            # only build if not in transposition
-            self.children[move] = child
-        return child
+            transposition_table[transposition_hash] = child
+
+        # only build if not in transposition (trying otherwise)
+        self.children[move] = child
+        return child, not child_found
 
     def get_sorted_moves(self):
         valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
@@ -133,17 +140,18 @@ class PExpNode:
             self.move_goodness = self.q + len(self.principal_variation.full_move_list) * 1E-6
 
     # ab cutoff for when we know we can
+    # Not sure if it applies regardless of parent
     def ab_valid(self, epsilon=1E-7):
-        if self.parent and self.parent.q:
-            return self.parent.is_maximizing and self.parent.q < PExpNode.MAX_Q \
-                    or not self.parent.is_maximizing and self.parent.q > PExpNode.MIN_Q
+        if not self.is_root and self.parents[0].q:
+            return self.parents[0].is_maximizing and self.parents[0].q < PExpNode.MAX_Q \
+                    or not self.parents[0].is_maximizing and self.parents[0].q > PExpNode.MIN_Q
         return True
 
     def assign_p(self, log_p):
         assert(self.log_local_p >= 0)
         assert(not self.p_assigned)
         self.log_local_p = log_p
-        self.log_total_p = self.parent.log_total_p + self.log_local_p
+        self.log_total_p = self.parents[0].log_total_p + self.log_local_p
         self.p_assigned = True
         self.p_comparator = int((min(-self.log_total_p, 100)) * 1E6)
 
@@ -178,9 +186,10 @@ class PExpNode:
 
         self.assign_move_goodness()
 
-        if self.parent:
+        if not self.is_root:
             # update pvs for parent
-            self.parent.recalculate_q(verbose=verbose)
+            for parent in self.parents:
+                parent.recalculate_q(verbose=verbose)
 
     # DEBUGGING METHODS
     def recursive_children(self, include_game_end=False):
