@@ -17,11 +17,10 @@ from core.optimized_minimax import PExpNode
 
 
 class PExpMind:
-    def __init__(self, size, alpha, init=True, channels=1, debug=True):
+    def __init__(self, size, alpha, init=True, channels=1):
 
         self.size = size
         self.channels = channels
-        self.debug = debug
 
         if self.size == 7:
             self.value_est = self.value_model_7()
@@ -78,14 +77,20 @@ class PExpMind:
         inp = Input(shape=(self.size, self.size, self.channels))
 
         # key difference between this and conv network is padding
-        conv_1 = Convolution2D(64, (3, 3), padding='valid', activation='relu',
+        conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(inp)
         bn2 = BatchNormalization()(conv_1)
         conv_2 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn2)
         bn3 = BatchNormalization()(conv_2)
+        conv_3 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn3)
+        bn4 = BatchNormalization()(conv_3)
+        conv_4 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn4)
+        bn5 = BatchNormalization()(conv_4)
 
-        flat = Flatten()(bn3)
+        flat = Flatten()(bn5)
 
         hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
         bn_final = BatchNormalization()(hidden)
@@ -238,7 +243,7 @@ class PExpMind:
 
         principal_variations = [root_node]
 
-        transposition_table = {}
+        transposition_table = set()
 
         # all nodes at the leaves of the search tree
         leaf_nodes = SortedList(principal_variations, key=lambda x: x.p_comparator)
@@ -248,8 +253,6 @@ class PExpMind:
         explored_states = 1
         i = 0
         MAXED_DURATION = 5
-
-        previously_removed = set()
 
         principal_qs = []
         while i < max_iters or len(root_node.principal_variation.full_move_list) < required_depth:
@@ -270,7 +273,7 @@ class PExpMind:
 
             current_leaves = len(leaf_nodes)
             # p search
-            self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed)
+            self.p_expand(board, principal_variations, leaf_nodes, transposition_table)
 
             # new states
             explored_states += len(leaf_nodes) - current_leaves
@@ -283,20 +286,23 @@ class PExpMind:
                 break
 
             # P will already have been expanded so do a Q eval
+
             self.q_eval_top_leaves(leaf_nodes, min_eval_q=k * 3, max_eval_q=k * 3)
 
             next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=k * 3, num_leaves=k)
 
-            principal_variations.extend(next_pvs)
+            next_pvs_set = set(next_pvs)
+            for node in principal_variations:
+                if node and node not in next_pvs_set and node == GameState.NOT_OVER:
+                    next_pvs.append(node)
 
             #root_node.consistent_pv()
             #root_node.principal_variation.recalculate_q()
-            if root_node.principal_variation:
+            if root_node.principal_variation and root_node.principal_variation.has_children():
                 # each of these nodes will be a leaf with P=0, making them evaluated next time around
-                while root_node.principal_variation.has_children():
-                    print('pv Q extension')
-                    self.q_eval([node for node in root_node.principal_variation.children.values()
-                                 if node.game_status == GameState.NOT_OVER and not node.has_children()])
+                print('pv Q extension')
+                self.q_eval([node for node in root_node.principal_variation.children.values()
+                             if node.game_status == GameState.NOT_OVER and not node.has_children()])
                 # print('PV Has Children', root_node.principal_variation)
                 # prev_pv = root_node.principal_variation
                 #
@@ -325,11 +331,13 @@ class PExpMind:
 
             # if we have a PV, add it to expand
             if root_node.principal_variation and root_node.principal_variation.game_status == GameState.NOT_OVER:
-                assert(root_node.principal_variation not in previously_removed)
-                assert(not root_node.principal_variation.has_children())
-                principal_variations.append(root_node.principal_variation)
+                if not root_node.principal_variation.has_children():
+                    next_pvs.append(root_node.principal_variation)
 
+            principal_variations.extend(next_pvs)
+            print('Before', len(principal_variations))
             principal_variations = set(principal_variations)
+            print('After', len(principal_variations))
 
             print('Root', root_node.principal_variation)
 
@@ -337,9 +345,12 @@ class PExpMind:
 
         possible_moves = root_node.get_sorted_moves()
 
+        if len(possible_moves) == 0:
+            print('what')
+
         for move, q in possible_moves:
             node = root_node.children[move]
-            print('Move', move, str(node.principal_variation))
+            print(str(node.principal_variation))
 
         return possible_moves
 
@@ -357,7 +368,7 @@ class PExpMind:
             # normally not, but it can be if nodes = PV's children
             assert(leaf.game_status == GameState.NOT_OVER)
             assert(not leaf.has_children())
-            parents_to_update.update(leaf.parents)
+            parents_to_update.add(leaf.parent)
             board_matrices.append(leaf.get_matrix())
 
         # if nothing to eval, get out
@@ -373,9 +384,7 @@ class PExpMind:
             )
 
         for i, leaf in enumerate(nodes):
-            # it's possible to have transposition assign q's even if we filtered above
-            if not leaf.assigned_q:
-                leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
+            leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
             #leaf.recalculate_q()
 
         for parent in parents_to_update:
@@ -388,13 +397,15 @@ class PExpMind:
         self.q_eval(best_leaves)
 
     accessed_transposition = 0
-    def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table, previously_removed):
+    previously_removed = set()
+    def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table):
+
         for parent in nodes_to_expand:
-            assert(parent not in previously_removed)
+            assert(parent not in PExpMind.previously_removed)
             # should NOT be expanding any non-leaf node
             assert(parent in leaf_nodes)
             leaf_nodes.remove(parent)
-            previously_removed.add(parent)
+            PExpMind.previously_removed.add(parent)
 
             for move in parent.full_move_list.moves:
                 board.blind_move(move[0], move[1])
@@ -415,23 +426,22 @@ class PExpMind:
                 board.move(move[0], move[1])
 
             for child_move in copy.copy(board.available_moves):
-                # if
-                child, new_child = parent.create_child(child_move, transposition_table)
-                if new_child:
+                child = parent.create_child(child_move, transposition_table)
+                if child:
                     board.move(child_move[0], child_move[1])
                     # if game is over, then we have our q
                     if board.game_won():
                         # the player who last move won!
                         if len(child.full_move_list.moves) == 1:
                             print('win now')
-                        winning_q = PExpNode.MIN_Q if board.player_to_move == Board.FIRST_PLAYER else PExpNode.MAX_Q
+                        winning_q = PExpNode.MAX_Q if board.player_to_move == Board.FIRST_PLAYER else PExpNode.MIN_Q
                         child.assign_q(winning_q, GameState.WON)
 
                     elif board.game_drawn():
                         child.assign_q(0, GameState.DRAW)
 
                     else:
-                        assert (child not in previously_removed)
+                        assert (child not in PExpMind.previously_removed)
                         new_leaves.append(child)
                         child.set_matrix(board.get_matrix())
 
