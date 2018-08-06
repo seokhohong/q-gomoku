@@ -3,6 +3,7 @@ from learner import pqmind
 from learner import pexp_mind
 from core import board
 from numpy.random import RandomState
+from core.optimized_minimax import PExpNode
 
 rs = RandomState(42)
 
@@ -13,11 +14,11 @@ CHANNELS = 4
 
 if __name__ == "__main__":
     mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=CHANNELS)
-    mind.load_net('../models/9_4_2')
+    mind.load_net('../models/9_4_3')
     round_board = board.Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
-    for j in range(rs.randint(0, 10)):
+    for j in range(rs.randint(0, int(SIZE * 2))):
         round_board.make_random_move()
 
     print(round_board.guide_print())
@@ -55,6 +56,10 @@ if __name__ == "__main__":
             best_q = best_node.q
             print(" ")
             print(move, 'Q:', best_q)
+
+            if best_q > PExpNode.MAX_MODEL_Q:
+                print('Computer Resigns!')
+                break
 
             round_board.move(move[0], move[1])
             print(round_board.guide_print())
