@@ -238,7 +238,7 @@ class PExpMind:
 
         principal_variations = [root_node]
 
-        transposition_table = set()
+        transposition_table = {}
 
         # all nodes at the leaves of the search tree
         leaf_nodes = SortedList(principal_variations, key=lambda x: x.p_comparator)
@@ -283,7 +283,6 @@ class PExpMind:
                 break
 
             # P will already have been expanded so do a Q eval
-
             self.q_eval_top_leaves(leaf_nodes, min_eval_q=k * 3, max_eval_q=k * 3)
 
             next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=k * 3, num_leaves=k)
@@ -327,6 +326,7 @@ class PExpMind:
             # if we have a PV, add it to expand
             if root_node.principal_variation and root_node.principal_variation.game_status == GameState.NOT_OVER:
                 assert(root_node.principal_variation not in previously_removed)
+                assert(not root_node.principal_variation.has_children())
                 principal_variations.append(root_node.principal_variation)
 
             principal_variations = set(principal_variations)
@@ -339,7 +339,7 @@ class PExpMind:
 
         for move, q in possible_moves:
             node = root_node.children[move]
-            print(str(node.principal_variation))
+            print('Move', move, str(node.principal_variation))
 
         return possible_moves
 
@@ -357,7 +357,7 @@ class PExpMind:
             # normally not, but it can be if nodes = PV's children
             assert(leaf.game_status == GameState.NOT_OVER)
             assert(not leaf.has_children())
-            parents_to_update.add(leaf.parent)
+            parents_to_update.update(leaf.parents)
             board_matrices.append(leaf.get_matrix())
 
         # if nothing to eval, get out
@@ -373,7 +373,9 @@ class PExpMind:
             )
 
         for i, leaf in enumerate(nodes):
-            leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
+            # it's possible to have transposition assign q's even if we filtered above
+            if not leaf.assigned_q:
+                leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
             #leaf.recalculate_q()
 
         for parent in parents_to_update:
@@ -413,8 +415,9 @@ class PExpMind:
                 board.move(move[0], move[1])
 
             for child_move in copy.copy(board.available_moves):
-                child = parent.create_child(child_move, transposition_table)
-                if child:
+                # if
+                child, new_child = parent.create_child(child_move, transposition_table)
+                if new_child:
                     board.move(child_move[0], child_move[1])
                     # if game is over, then we have our q
                     if board.game_won():
