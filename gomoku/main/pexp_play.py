@@ -75,7 +75,7 @@ def run():
                                     epsilon=0.1,
                                     required_depth=4,
                                     k=SIZE ** 2,
-                                    max_iters=30,
+                                    max_iters=20,
                                     )
             print(round_board.pprint())
             if current_player == Board.FIRST_PLAYER:
@@ -84,21 +84,21 @@ def run():
                 current_player = Board.FIRST_PLAYER
             if result:
                 break
-            #return
+            return
 
         print('done')
 if __name__ == "__main__":
-    run()
+    #run()
 
-    # import cProfile, pstats
-    # from io import StringIO
-    #
-    # pr = cProfile.Profile()
-    # pr.enable()
-    # run()
-    # pr.disable()
-    # s = StringIO()
-    # sortby = 'cumulative'
-    # ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    # ps.print_stats()
-    # print(s.getvalue())
+    import cProfile, pstats
+    from io import StringIO
+
+    pr = cProfile.Profile()
+    pr.enable()
+    run()
+    pr.disable()
+    s = StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())

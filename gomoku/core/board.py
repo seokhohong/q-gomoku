@@ -64,6 +64,8 @@ class Board:
         self.flip_player_to_move()
         self.game_state = GameState.NOT_OVER
 
+
+
     def get_matrix(self):
         if self.player_to_move == Board.FIRST_PLAYER:
             self.matrix[:, :, Board.TURN_INFO_INDEX].fill(1)

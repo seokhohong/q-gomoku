@@ -230,6 +230,7 @@ class PExpMind:
     # board perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
 
+    previous_root_node = None
     def pvs_best_moves(self, board, max_iters=10, k=25, required_depth=5):
         is_maximizing = True if board.player_to_move == 1 else False
         root_node = optimized_minimax.PExpNode(parent=None,
@@ -268,12 +269,9 @@ class PExpMind:
 
             #assert(len(leaf_nodes) == len(set(root_node.recursive_children())))
 
-            current_leaves = len(leaf_nodes)
             # p search
             self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed)
 
-            # new states
-            explored_states += len(leaf_nodes) - current_leaves
             # don't need to prepare for next iteration
 
             principal_variations = self.pvs_k_principal_variations(leaf_nodes, k=k)
@@ -283,40 +281,19 @@ class PExpMind:
                 break
 
             # P will already have been expanded so do a Q eval
-            self.q_eval_top_leaves(leaf_nodes, min_eval_q=k * 3, max_eval_q=k * 3)
+            self.q_eval_top_leaves(leaf_nodes, min_eval_q=k ** 2, max_eval_q=k ** 2)
 
-            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=k * 3, num_leaves=k)
+            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=k ** 2, num_leaves=k)
 
             principal_variations.extend(next_pvs)
 
             #root_node.consistent_pv()
-            #root_node.principal_variation.recalculate_q()
             if root_node.principal_variation:
                 # each of these nodes will be a leaf with P=0, making them evaluated next time around
                 while root_node.principal_variation.has_children():
                     print('pv Q extension')
                     self.q_eval([node for node in root_node.principal_variation.children.values()
                                  if node.game_status == GameState.NOT_OVER and not node.has_children()])
-                # print('PV Has Children', root_node.principal_variation)
-                # prev_pv = root_node.principal_variation
-                #
-                # valid_children = [tup for tup in root_node.principal_variation.children.items() if tup[1].q is not optimized_minimax.PExpNode.UNASSIGNED_Q]
-                # if len(valid_children) > 0:
-                #     print('Weird pointer shit')
-                #     if root_node.principal_variation.is_maximizing:
-                #         best_move = max(valid_children, key=lambda x: x[1].move_goodness)[0]
-                #     else:
-                #         best_move = min(valid_children, key=lambda x: x[1].move_goodness)[0]
-                #     str(root_node)
-                #
-                #     # using negamax framework
-                #     root_node.principal_variation = root_node.principal_variation.children[best_move].principal_variation
-                #
-                # root_node.principal_variation.recalculate_q()
-                #
-                # if prev_pv == root_node.principal_variation:
-                #     print('why :(')
-                # print("New PV", root_node.principal_variation)
 
             # this check doesn't hold if we do PV Q extensions
             #if root_node.principal_variation:
@@ -333,13 +310,16 @@ class PExpMind:
 
             print('Root', root_node.principal_variation)
 
-        print('Explored ' + str(explored_states) + " States in " + str(i) + " Iterations")
+        q_stats, p_stats = root_node.recursive_stats()
+        print('Explored ' + str(p_stats) + " States (Q evals: " + str(q_stats) + ") in " + str(i) + " Iterations")
 
         possible_moves = root_node.get_sorted_moves()
 
         for move, q in possible_moves:
             node = root_node.children[move]
             print('Move', move, str(node.principal_variation))
+
+        PExpMind.previous_root_node = root_node
 
         return possible_moves
 
@@ -376,7 +356,6 @@ class PExpMind:
             # it's possible to have transposition assign q's even if we filtered above
             if not leaf.assigned_q:
                 leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
-            #leaf.recalculate_q()
 
         for parent in parents_to_update:
             parent.recalculate_q()
@@ -408,6 +387,7 @@ class PExpMind:
         # each board state is defined by a list of moves
         p_search_vectors = []
         new_leaves = []
+        q_update = set()
 
         for parent in nodes_to_expand:
             # for each move except the last, make rapid moves on board
@@ -426,9 +406,11 @@ class PExpMind:
                             print('win now')
                         winning_q = PExpNode.MIN_Q if board.player_to_move == Board.FIRST_PLAYER else PExpNode.MAX_Q
                         child.assign_q(winning_q, GameState.WON)
+                        q_update.add(parent)
 
                     elif board.game_drawn():
                         child.assign_q(0, GameState.DRAW)
+                        q_update.add(parent)
 
                     else:
                         assert (child not in previously_removed)
@@ -439,6 +421,7 @@ class PExpMind:
                     board.unmove()
                 else:
                     PExpMind.accessed_transposition += 1
+                    q_update.add(parent)
 
             # update p
             vector = board.get_matrix()
@@ -448,9 +431,9 @@ class PExpMind:
             for i in range(len(parent.full_move_list)):
                 board.unmove()
 
-        # children may have had updates from transposition or otherwise
-        for parent in nodes_to_expand:
+        for parent in q_update:
             parent.recalculate_q()
+
 
         if len(p_search_vectors) == 0:
             return False

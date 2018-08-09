@@ -1,17 +1,26 @@
-from sortedcontainers import sortedset
+from sortedcontainers import SortedSet
 import random
+import cProfile
+from queue import PriorityQueue
 
-class Foo:
-    def __init__(self):
-        self.value = random.random()
+def mass_init():
+    for i in range(100000):
+        d = PriorityQueue()
+        #SortedSet(key=lambda x: x.move_goodness)
 
 
-leaves = sortedset.SortedSet([Foo()], key=lambda x: x.value)
+if __name__ == "__main__":
+    #run()
 
-for i in range(10):
-    leaves.add(Foo())
+    import cProfile, pstats
+    from io import StringIO
 
-newFoo = Foo()
-leaves.add(newFoo)
-
-leaves.remove(newFoo)
+    pr = cProfile.Profile()
+    pr.enable()
+    mass_init()
+    pr.disable()
+    s = StringIO()
+    sortby = 'cumulative'
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())
