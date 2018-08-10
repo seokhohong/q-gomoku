@@ -50,6 +50,8 @@ class Board:
         # whether current game_state is accurate
         self.state_computed = False
 
+        self.num_moves = 0
+
     def _mark_not_computed(self):
         self.state_computed = False
 
@@ -64,7 +66,7 @@ class Board:
         self.flip_player_to_move()
         self.game_state = GameState.NOT_OVER
 
-
+        self.num_moves -= 1
 
     def get_matrix(self):
         if self.player_to_move == Board.FIRST_PLAYER:
@@ -121,6 +123,8 @@ class Board:
 
         self.available_moves.remove((x, y))
         self.flip_player_to_move()
+
+        self.num_moves += 1
 
     def move(self, x, y):
         self.blind_move(x, y)

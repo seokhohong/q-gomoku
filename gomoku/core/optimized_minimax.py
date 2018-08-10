@@ -25,6 +25,13 @@ class MoveList:
 
     def __len__(self):
         return len(self.moves)
+    # incomplete
+    def cleanse(self, moves):
+        move_list = list(self.moves)
+        for move in moves:
+            move_list.remove(move)
+            self.list_hash.remove(move)
+        self.moves = move_list
 
     def transposition_hash(self):
         return tuple(self.list_hash)
@@ -233,6 +240,11 @@ class PExpNode:
                     (self.is_maximizing and self.q < parent.best_child.q)
             ):
                 parent.recalculate_q()
+
+    def cleanse_memory(self, moves):
+        for child in self.children:
+            child.cleanse_memory(moves)
+
     # DEBUGGING METHODS
 
     def recursive_stats(self):
