@@ -235,7 +235,7 @@ class PExpMind:
         is_maximizing = True if board.player_to_move == 1 else False
         root_node = optimized_minimax.PExpNode(parent=None,
                                                 is_maximizing=is_maximizing,
-                                                full_move_list=optimized_minimax.MoveList(moves=()))
+                                                full_move_list=optimized_minimax.MoveList(moves=(), position_hash=[]))
 
         principal_variations = [root_node]
 

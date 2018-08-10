@@ -1,17 +1,21 @@
 import numpy as np
 
+from copy import copy
 from core.board import GameState
 from sortedcontainers import SortedSet
 
 class MoveList:
     # moves should be a tuple
-    def __init__(self, moves):
+    def __init__(self, moves, position_hash):
         self.moves = moves
-        # for move in moves:
-        #    assert(len(move) == 2)
+        self.list_hash = position_hash
 
+    # hashes are unique to board positions, allowing variation in the order of created moves
     def append(self, new_move):
-        return MoveList((self.moves + (new_move,)))
+        new_hash_elem = (-1) ** (len(self.moves) % 2) * (new_move[0] * 100 + new_move[1])
+        new_list_hash = list(self.list_hash)
+        new_list_hash.append(new_hash_elem)
+        return MoveList((self.moves + (new_move, )), sorted(new_list_hash))
 
     def __eq__(self, other):
         return self.moves == other.moves
@@ -23,7 +27,7 @@ class MoveList:
         return len(self.moves)
 
     def transposition_hash(self):
-        return tuple(sorted([(i % 2, move) for i, move in enumerate(self.moves)]))
+        return tuple(self.list_hash)
 
 # P expansion node
 class PExpNode:
@@ -52,6 +56,8 @@ class PExpNode:
         # key is move
         self.children = {}
         self.children_with_q = []
+        # current best child
+        self.best_child = None
 
         self.principal_variation = None
         self.q = PExpNode.UNASSIGNED_Q
@@ -205,27 +211,15 @@ class PExpNode:
     # take the largest (or smallest) q across all seen moves
 
         # if this node is still a leaf, break
-        if not self.children_with_q:
+        if len(self.children_with_q) == 0:
             return
 
-        valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
-        assert(len(valid_children) == len(self.children_with_q))
-        if len(valid_children) == 0:
-            return
+        sign = 1 if self.is_maximizing else -1
+        self.children_with_q.sort(key=lambda x: sign * x.move_goodness, reverse=True)
+        self.best_child = self.children_with_q[0]
 
-        if self.is_maximizing:
-            best_move = max(valid_children, key=lambda x: x[1].move_goodness)[0]
-        else:
-            best_move = min(valid_children, key=lambda x: x[1].move_goodness)[0]
-        #best_index = 0 if self.is_maximizing else -1
-
-        #sign = -1 if self.is_maximizing else -1
-        #self.children_with_q.sort(key=lambda x: sign * x.move_goodness, reverse=True)
-        #best_index = 0
-        best_child = self.children[best_move]
-
-        self.principal_variation = best_child.principal_variation
-        self.q = best_child.q
+        self.principal_variation = self.best_child.principal_variation
+        self.q = self.best_child.q
         self.assigned_q = True
 
         self.assign_move_goodness()
@@ -234,7 +228,11 @@ class PExpNode:
         for parent in self.parents:
             # if this node is in the PV line
             #if parent.best_move is None or parent.best_move == parent.child_to_move[self]:
-            parent.recalculate_q()
+            if parent.best_child == self or parent.best_child is None or (
+                    (self.is_maximizing and self.q > parent.best_child.q) or
+                    (self.is_maximizing and self.q < parent.best_child.q)
+            ):
+                parent.recalculate_q()
     # DEBUGGING METHODS
 
     def recursive_stats(self):

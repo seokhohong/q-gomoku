@@ -28,7 +28,7 @@ class Board:
         self.size = size
 
         # three for No Player, Player 1, Player 2, one for turn index
-        self.matrix = np.zeros((self.size, self.size, 4))
+        self.matrix = np.zeros((self.size, self.size, 4), dtype=np.int)
         self.matrix[:, :, Board.NO_PLAYER].fill(1)
 
         # tracks which player played which spot (optimization
@@ -159,16 +159,11 @@ class Board:
 
     def chain_length(self, center_x, center_y, delta_x, delta_y):
         center_stone = self.which_stone[center_x, center_y]
-        if center_stone == Board.NO_PLAYER:
-            return 0
-        chain_length = 1
-        for step in range(1, self.win_chain_length):
-            step_x = delta_x * step
-            step_y = delta_y * step
-            if 0 <= center_x + step_x < self.size and 0 <= center_y + step_y < self.size and \
-                    self.matrix[center_x + step_x, center_y + step_y, center_stone] == 1:
-                chain_length += 1
-            else:
+        for chain_length in range(1, self.win_chain_length):
+            step_x = delta_x * chain_length
+            step_y = delta_y * chain_length
+            if not(0 <= center_x + step_x < self.size and 0 <= center_y + step_y < self.size and \
+                    self.matrix[center_x + step_x, center_y + step_y, center_stone] == 1):
                 break
         return chain_length
 
