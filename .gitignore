@@ -2,6 +2,7 @@
 *.npz
 .idea*
 gomoku/models/*
+gomoku/logs/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

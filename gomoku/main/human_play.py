@@ -5,8 +5,6 @@ from core import board
 from numpy.random import RandomState
 from core.optimized_minimax import PExpNode
 
-rs = RandomState(42)
-
 import random
 
 SIZE = 9
@@ -18,7 +16,7 @@ if __name__ == "__main__":
     round_board = board.Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
-    for j in range(rs.randint(0, int(SIZE * 2))):
+    for j in range(random.randint(0, int(SIZE * 3))):
         round_board.make_random_move()
 
     print(round_board.guide_print())
@@ -46,10 +44,12 @@ if __name__ == "__main__":
             print(round_board.guide_print())
         else:
             print('Computer is thinking...')
-            possible_moves = mind.pvs_best_moves(round_board,
+            possible_moves, root_node = mind.pvs_best_moves(round_board,
                                                 required_depth=5,
-                                                max_iters=30,
-                                                k=SIZE ** 2)
+                                                max_iters=50,
+                                                k=SIZE ** 2,
+                                                p_threshold=-4)
+            mind.save_root(round_board, root_node)
             picked_move, picked_node = possible_moves[0]
             # add training example assuming best move
             move, best_node = possible_moves[0]

@@ -191,28 +191,6 @@ class PExpNode:
         self.p_assigned = True
         self.p_comparator = int((min(-self.log_total_p, 100)) * 1E6)
 
-    # def recalculate_q(self):
-    #     # take the largest (or smallest) q across all seen moves
-    #
-    #     # if this node is still a leaf, break
-    #     if len(self.children_with_q) == 0:
-    #         return
-    #
-    #     best_index = 0 if self.is_maximizing else -1
-    #     best_child = self.children_with_q[best_index]
-    #
-    #     self.principal_variation = best_child.principal_variation
-    #     self.q = best_child.q
-    #     self.assigned_q = True
-    #
-    #     self.assign_move_goodness()
-    #
-    #     # update parents
-    #     for parent in self.parents:
-    #         # if this node is in the PV line
-    #         #if parent.best_move is None or parent.best_move == parent.child_to_move[self]:
-    #         parent.recalculate_q()
-
     def recalculate_q(self):
 
     # take the largest (or smallest) q across all seen moves
@@ -234,10 +212,9 @@ class PExpNode:
         # update parents
         for parent in self.parents:
             # if this node is in the PV line
-            #if parent.best_move is None or parent.best_move == parent.child_to_move[self]:
             if parent.best_child == self or parent.best_child is None or (
-                    (self.is_maximizing and self.q > parent.best_child.q) or
-                    (self.is_maximizing and self.q < parent.best_child.q)
+                    (parent.is_maximizing and self.q > parent.best_child.q) or
+                    (not parent.is_maximizing and self.q < parent.best_child.q)
             ):
                 parent.recalculate_q()
 
@@ -282,6 +259,8 @@ class PExpNode:
                 best_move = max(valid_children, key=lambda x: x[1].move_goodness)[0]
             else:
                 best_move = min(valid_children, key=lambda x: x[1].move_goodness)[0]
+
+            assert(self.children[best_move].q - self.best_child.q < 1E-6)
 
             if self.assigned_q:
                 if abs(self.q - self.children[best_move].q) > 1E-6:

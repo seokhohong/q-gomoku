@@ -75,7 +75,7 @@ def run():
                                     epsilon=0.1,
                                     required_depth=4,
                                     k=SIZE ** 2,
-                                    max_iters=10,
+                                    max_iters=30,
                                     p_threshold=-4
                                     )
             print(round_board.pprint())
@@ -85,7 +85,7 @@ def run():
                 current_player = Board.FIRST_PLAYER
             if result:
                 break
-            #return
+            return
 
         print('done')
 if __name__ == "__main__":

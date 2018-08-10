@@ -9,6 +9,7 @@ import pandas as pd
 import tensorflow as tf
 
 from sortedcontainers import SortedSet
+import pickle
 from sortedcontainers import SortedList
 
 from core.board import GameState
@@ -233,7 +234,7 @@ class PExpMind:
     # board perception will always be from the perspective of Player 1
     # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
 
-    def pvs_best_moves(self, board, max_iters=10, k=25, required_depth=5, root_node=None, p_threshold=1):
+    def pvs_best_moves(self, board, max_iters=10, k=25, required_depth=5, root_node=None, p_threshold=-10):
         is_maximizing = True if board.player_to_move == 1 else False
 
         if root_node is None:
@@ -295,7 +296,6 @@ class PExpMind:
             if root_node.principal_variation:
                 # each of these nodes will be a leaf with P=0, making them evaluated next time around
                 while root_node.principal_variation.has_children():
-                    print('pv Q extension')
                     self.q_eval([node for node in root_node.principal_variation.children.values()
                                  if node.game_status == GameState.NOT_OVER and not node.has_children()])
 
@@ -531,12 +531,24 @@ class PExpMind:
         print(current_q, best_q)
         self.add_train_example(board, new_best_q, best_move)
 
+        self.save_root(board, root_node)
+
         # picked move may not equal best move if we're making a suboptimal one
         board.move(picked_move[0], picked_move[1])
 
         self.memory_root = root_node.children[picked_move[0], picked_move[1]]
 
         return board.game_over()
+
+    def save_root(self, board, root_node):
+        # save for debugging
+        import sys
+        sys.setrecursionlimit(100000)
+        saving_hash = str(hash(tuple(board.get_matrix().reshape(-1))))
+        with open('../logs/' + saving_hash + '.pkl', 'wb') as f:
+            root_node.set_matrix(board.get_matrix())
+            pickle.dump(root_node, f)
+            print('Root saved at ', saving_hash)
 
     def one_hot_p(self, move_index):
         vector = np.zeros((self.size ** 2))
