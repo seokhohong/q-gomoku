@@ -162,7 +162,7 @@ class Board:
         for chain_length in range(1, self.win_chain_length):
             step_x = delta_x * chain_length
             step_y = delta_y * chain_length
-            if not(0 <= center_x + step_x < self.size and 0 <= center_y + step_y < self.size and \
+            if not(0 <= center_x + step_x < self.size and 0 <= center_y + step_y < self.size and
                     self.matrix[center_x + step_x, center_y + step_y, center_stone] == 1):
                 break
         return chain_length
