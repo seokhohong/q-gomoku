@@ -89,6 +89,9 @@ class PExpNode:
     def get_matrix(self):
         return self._matrix
 
+    def has_matrix(self):
+        return self._matrix is not None
+
     def has_children(self):
         return len(self.children) > 0
 
@@ -189,7 +192,11 @@ class PExpNode:
         assert(not self.p_assigned)
         self.log_total_p = self.parents[0].log_total_p + log_p
         self.p_assigned = True
+        # fix this
         self.p_comparator = int((min(-self.log_total_p, 100)) * 1E6)
+
+    def depth(self):
+        return len(self.full_move_list.moves)
 
     def recalculate_q(self):
 
@@ -228,12 +235,14 @@ class PExpNode:
         num_q = 1 if self.assigned_q else 0
         num_nodes = len(self.children)
         if not self.has_children():
+            self.num_nodes = num_nodes
             return num_q, num_nodes
 
         for child in self.children.values():
             child_q, child_nodes = child.recursive_stats()
             num_q += child_q
             num_nodes += child_nodes
+        self.num_nodes = num_nodes
         return num_q, num_nodes
 
     def recursive_children(self, include_game_end=False):

@@ -33,7 +33,7 @@ class DisplayForm:
         else:
             measure_str = " P: {0:.4f}".format(node.log_total_p)
 
-        return tabbing + measure_str + "  (" + str(self.node_keys[node]) + ") " + "\n"
+        return tabbing + measure_str + "  (" + str(self.node_keys[node]) + ") Count: " + str(node.num_nodes) + "\n"
 
     def recursive_display(self, node, open_nodes, move):
         display = self.node_display(node, move)
@@ -56,7 +56,26 @@ class DisplayForm:
             curr_parents = curr_parents[0].parents
 
     def open_pv(self, node):
-        self.open_node(self.node_keys[self.node_indices[node].principal_variation])
+        best_child = node.best_child
+        self.open_nodes.add(best_child)
+        if best_child != self and best_child and  best_child.best_child:
+            self.open_pv(best_child)
+
+def reconstruction(matrix):
+    instructions = ""
+    xs = []
+    ys = []
+    for i in range(0, SIZE):
+        for j in range(SIZE):
+            if matrix[i, j, Board.FIRST_PLAYER] == 1:
+                xs.append((i, j))
+            elif matrix[i, j, Board.SECOND_PLAYER] == 1:
+                ys.append((i, j))
+    for i in range(len(xs)):
+        instructions += 'board.move(' + str(xs[i][0]) + ", " + str(xs[i][1]) + ")" + '\n'
+        if i < len(ys):
+            instructions += 'board.move(' + str(ys[i][0]) + ", " + str(ys[i][1]) + ")" + '\n'
+    return instructions
 
 SIZE = 9
 def print_board(matrix):
@@ -74,13 +93,14 @@ def print_board(matrix):
         board_string += "|"
     return board_string
 
-node_num = -7745159372723769980
+node_num = 2369795621785191676
 with open(str(node_num) + '.pkl', 'rb') as f:
     root_node = pickle.load(f)
 
 df = DisplayForm(root_node)
 print(print_board(root_node.get_matrix()))
 print(df)
+#print(reconstruction(root_node.get_matrix()))
 while True:
     inp = input("_:")
     if inp.startswith('open'):
@@ -91,7 +111,7 @@ while True:
             print('Parsing coordinate error')
             continue
         df.open_node(x)
-        print(print_board(root_node.get_matrix()))
+        print(df)
 
     if inp.startswith('openpv'):
         command, x = inp.split(' ')
@@ -100,8 +120,8 @@ while True:
         except:
             print('Parsing coordinate error')
             continue
-        df.open_pv(x)
-        print(print_board(root_node.get_matrix()))
+        df.open_pv(df.node_indices[x])
+        print(df)
 
     if inp.startswith('board'):
         command, x = inp.split(' ')
@@ -110,4 +130,19 @@ while True:
         except:
             print('Parsing coordinate error')
             continue
-        print(print_board(df.node_indices[x].get_matrix()))
+        if df.node_indices[x].has_matrix():
+            print(print_board(df.node_indices[x].get_matrix()))
+        else:
+            print('No Matrix')
+
+    if inp.startswith('reconstruct'):
+        command, x = inp.split(' ')
+        try:
+            x = int(x)
+        except:
+            print('Parsing coordinate error')
+            continue
+        if df.node_indices[x].has_matrix():
+            print(reconstruction(df.node_indices[x].get_matrix()))
+        else:
+            print('No Matrix')

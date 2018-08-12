@@ -1,9 +1,10 @@
 
 from learner import pqmind
 from learner import pexp_mind
-from core import board
+from core.board import Board
 from numpy.random import RandomState
 from core.optimized_minimax import PExpNode
+import numpy as np
 
 import random
 
@@ -13,16 +14,36 @@ CHANNELS = 4
 if __name__ == "__main__":
     mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=CHANNELS)
     mind.load_net('../models/9_4_4')
-    round_board = board.Board(size=SIZE, win_chain_length=5)
+
+
+    def expanding_p(depth, p):
+        return np.logical_or(np.logical_or(
+            np.logical_and(depth < 4, p > -5),
+            np.logical_and(depth < 6, p > -4),
+            np.logical_and(depth < 8, p > -4)),
+            np.logical_and(depth < np.inf, p > -3)
+        )
+
+
+    def permissive_expansion(depth):
+        if depth < 2:
+            return np.inf
+        if depth < 8:
+            return 5
+        return 3
+
+    mind.define_policies(expanding_p, permissive_expansion)
+
+    board = Board(size=SIZE, win_chain_length=5)
 
     # randomize the board a bit
     for j in range(random.randint(0, int(SIZE * 3))):
-        round_board.make_random_move()
+        board.make_random_move()
 
-    print(round_board.guide_print())
+    print(board.guide_print())
 
     while True:
-        if round_board.player_to_move == board.Board.FIRST_PLAYER:
+        if board.player_to_move == Board.FIRST_PLAYER:
             inp = input("Input your move (i.e. \"3 5\"): ")
             if len(inp.split(' ')) != 2:
                 print('Incorrect number of coordinates, please try again!')
@@ -37,19 +58,20 @@ if __name__ == "__main__":
             if x < 0 or x >= SIZE or y < 0 or y >= SIZE:
                 print('Out of bounds!')
                 continue
-            if (x, y) not in round_board.available_moves:
+            if (x, y) not in board.available_moves:
                 print('Invalid Move!')
                 continue
-            result = round_board.move(x, y)
-            print(round_board.guide_print())
+            result = board.move(x, y)
+            print(board.guide_print())
         else:
             print('Computer is thinking...')
-            possible_moves, root_node = mind.pvs_best_moves(round_board,
-                                                required_depth=5,
-                                                max_iters=50,
-                                                k=SIZE ** 2,
-                                                p_threshold=-4)
-            mind.save_root(round_board, root_node)
+
+            possible_moves, root_node = mind.pvs_best_moves(board,
+                                                required_depth=6,
+                                                max_iters=20,
+                                                k=SIZE ** 3)
+
+            mind.save_root(board, root_node)
             picked_move, picked_node = possible_moves[0]
             # add training example assuming best move
             move, best_node = possible_moves[0]
@@ -61,15 +83,15 @@ if __name__ == "__main__":
                 print('Computer Resigns!')
                 break
 
-            round_board.move(move[0], move[1])
-            print(round_board.guide_print())
+            board.move(move[0], move[1])
+            print(board.guide_print())
 
-        if round_board.game_drawn():
+        if board.game_drawn():
             print("DRAW!")
             break
 
-        if round_board.game_won():
-            if round_board.player_to_move == 1:
+        if board.game_won():
+            if board.player_to_move == 1:
                 print('COMPUTER WINS!')
             else:
                 print('YOU WIN!')

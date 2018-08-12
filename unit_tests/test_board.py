@@ -16,7 +16,9 @@ board.move(2, 3)
 board.move(3, 3)
 board.unmove()
 board.move(3, 3)
+assert(board.chain_length(3, 3, 1, 1) == 1)
+print(board.pprint())
 assert(board.get_matrix()[2, 2, Board.TURN_INFO_INDEX] == -1)
 assert(board.game_won())
-print(board.pprint())
+
 

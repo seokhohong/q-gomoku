@@ -163,7 +163,7 @@ class Board:
 
     def chain_length(self, center_x, center_y, delta_x, delta_y):
         center_stone = self.which_stone[center_x, center_y]
-        for chain_length in range(1, self.win_chain_length):
+        for chain_length in range(1, self.win_chain_length + 1):
             step_x = delta_x * chain_length
             step_y = delta_y * chain_length
             if not(0 <= center_x + step_x < self.size and 0 <= center_y + step_y < self.size and
