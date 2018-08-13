@@ -32,7 +32,7 @@ if __name__ == "__main__":
             return 5
         return 3
 
-    mind.define_policies(expanding_p, permissive_expansion)
+    mind.define_policies(expanding_p, permissive_expansion, convergence_count=5)
 
     board = Board(size=SIZE, win_chain_length=5)
 

@@ -122,7 +122,8 @@ class PExpNode:
         return child, not child_found
 
     def get_sorted_moves(self):
-        return sorted(self.children_with_q, key=lambda x: x[1].move_goodness, reverse=self.is_maximizing)
+        valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
+        return sorted(valid_children, key=lambda x: x[1].move_goodness, reverse=self.is_maximizing)
 
     # used ONLY for leaf assignment
     def assign_q(self, q, game_status):

@@ -129,7 +129,7 @@ def run():
                 return 5
             return 3
 
-        mind.define_policies(expanding_p, permissive_expansion)
+        mind.define_policies(expanding_p, permissive_expansion, convergence_count=5)
 
         while True:
             result = mind.make_move(board,
