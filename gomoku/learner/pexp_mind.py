@@ -19,7 +19,7 @@ from core.optimized_minimax import PExpNode
 
 
 class PExpMind:
-    def __init__(self, size, alpha, init=True, channels=1, debug=True):
+    def __init__(self, size, alpha, init=True, channels=1, debug=True, save_root=True):
 
         self.size = size
         self.channels = channels
@@ -56,6 +56,7 @@ class PExpMind:
 
         self.alpha = alpha
 
+        self.save_root = save_root
         self.memory_root = None
 
     def value_model_7(self):
@@ -560,7 +561,7 @@ class PExpMind:
         print(current_q, best_q)
         self.add_train_example(board, new_best_q, best_move)
 
-        self.save_root(board, root_node)
+        self.pickle_root(board, root_node)
 
         # picked move may not equal best move if we're making a suboptimal one
         board.move(picked_move[0], picked_move[1])
@@ -569,15 +570,16 @@ class PExpMind:
 
         return board.game_over()
 
-    def save_root(self, board, root_node):
-        # save for debugging
-        import sys
-        sys.setrecursionlimit(100000)
-        saving_hash = str(hash(tuple(board.get_matrix().reshape(-1))))
-        with open('../logs/' + saving_hash + '.pkl', 'wb') as f:
-            root_node.set_matrix(board.get_matrix())
-            pickle.dump(root_node, f)
-            print('Root saved at ', saving_hash)
+    def pickle_root(self, board, root_node):
+        if self.save_root:
+            # save for debugging
+            import sys
+            sys.setrecursionlimit(100000)
+            saving_hash = str(hash(tuple(board.get_matrix().reshape(-1))))
+            with open('../logs/' + saving_hash + '.pkl', 'wb') as f:
+                root_node.set_matrix(board.get_matrix())
+                pickle.dump(root_node, f)
+                print('Root saved at ', saving_hash)
 
     def one_hot_p(self, move_index):
         vector = np.zeros((self.size ** 2))
