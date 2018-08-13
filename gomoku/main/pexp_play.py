@@ -34,7 +34,7 @@ def iter_function(i):
         return 20
 
 def run():
-    mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=4)
+    mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=4)
     mind.load_net('../models/9_4_2')
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
@@ -94,23 +94,6 @@ def run():
         # board.move(8, 8)
         # board.move(8, 7)
 
-        board.move(3, 8)
-        board.move(1, 2)
-        board.move(4, 3)
-        board.move(1, 3)
-        board.move(5, 4)
-        board.move(1, 4)
-        board.move(5, 5)
-        board.move(1, 5)
-        board.move(5, 8)
-        board.move(1, 8)
-        board.move(6, 5)
-        board.move(4, 1)
-        board.move(7, 1)
-        board.move(6, 3)
-        board.move(7, 6)
-        board.move(7, 7)
-
         print(board)
         current_player = board.player_to_move
 
@@ -129,16 +112,14 @@ def run():
                 return 5
             return 3
 
-        mind.define_policies(expanding_p, permissive_expansion, convergence_count=5)
+        mind.define_policies(expanding_p, permissive_expansion, convergence_count=5,
+                             alpha = 0.2,
+                             k=SIZE ** 3, required_depth=6, max_iters=20)
 
         while True:
             result = mind.make_move(board,
                                     as_player=current_player,
-                                    epsilon=0.1,
-                                    required_depth=6,
-                                    k=SIZE ** 3,
-                                    max_iters=20,
-                                    )
+                                    epsilon=0.1)
             print(board.pprint())
             if current_player == Board.FIRST_PLAYER:
                 current_player = Board.SECOND_PLAYER

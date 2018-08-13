@@ -66,10 +66,7 @@ if __name__ == "__main__":
         else:
             print('Computer is thinking...')
 
-            possible_moves, root_node = mind.pvs_best_moves(board,
-                                                required_depth=6,
-                                                max_iters=20,
-                                                k=SIZE ** 3)
+            possible_moves, root_node = mind.p_search(board, root_node=None)
 
             mind.save_root(board, root_node)
             picked_move, picked_node = possible_moves[0]
