@@ -95,19 +95,13 @@ class PExpNode:
     def has_children(self):
         return len(self.children) > 0
 
-    # def __lt__(self, other):
-    #     return self.log_total_p > other.log_total_p
-    #
-    # def __gt__(self, other):
-    #     return self.log_total_p < other.log_total_p
-
-
     transposition_access = 0
 
     # note this does NOT compute q for child
     def create_child(self, move, transposition_table):
         new_move_list = self.full_move_list.append(move)
 
+        # build the hash of the transposition to check whether the position has been visited before
         transposition_hash = new_move_list.transposition_hash()
         child_found = transposition_hash in transposition_table
         child = None
@@ -123,17 +117,12 @@ class PExpNode:
                             full_move_list=new_move_list)
             transposition_table[transposition_hash] = child
 
-        # only build if not in transposition (trying otherwise)
-        #for current_child in self.children.values():
-        #    assert(len(current_child.full_move_list) == len(child.full_move_list))
-
         self.children[move] = child
 
         return child, not child_found
 
     def get_sorted_moves(self):
-        valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
-        return sorted(valid_children, key=lambda x: x[1].move_goodness, reverse=self.is_maximizing)
+        return sorted(self.children_with_q, key=lambda x: x[1].move_goodness, reverse=self.is_maximizing)
 
     # used ONLY for leaf assignment
     def assign_q(self, q, game_status):
@@ -144,7 +133,7 @@ class PExpNode:
 
         # for a leaf node, the principal variation is itself
         self.q = q
-        assert(q <= PExpNode.MAX_Q and q >= PExpNode.MIN_Q)
+        assert(PExpNode.MIN_Q <= q <= PExpNode.MAX_Q)
         self.principal_variation = self
         assert(not self.assigned_q)
         self.assigned_q = True

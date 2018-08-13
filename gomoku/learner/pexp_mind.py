@@ -393,12 +393,13 @@ class PExpMind:
 
     accessed_transposition = 0
 
-    def define_policies(self, p_threshold, max_expansion):
+    def define_policies(self, p_threshold, max_expansion, convergence_count):
         self._p_threshold = p_threshold
         self._max_expansion = max_expansion
-    # use
-    def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table, previously_removed,
-                 ):
+        self._move_convergence_count = convergence_count
+    # Expand all nodes_to_expand, updating leaf_nodes in place
+    # Also passes
+    def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table, previously_removed):
         for parent in nodes_to_expand:
             if parent in previously_removed:
                 continue
@@ -411,8 +412,6 @@ class PExpMind:
             except ValueError:
                 print(parent.p_comparator)
             previously_removed.add(parent)
-
-        prev_board = board.get_matrix()
 
         # each board state is defined by a list of moves
         p_search_vectors = self.get_p_vectors(board, nodes_to_expand)
@@ -486,8 +485,6 @@ class PExpMind:
             parent.recalculate_q()
 
         leaf_nodes += new_leaves
-
-        assert(np.alltrue(np.equal(prev_board, board.get_matrix())))
 
         return len(new_leaves) > 0
 
