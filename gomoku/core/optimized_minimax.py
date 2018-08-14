@@ -1,8 +1,6 @@
 import numpy as np
 
-from copy import copy
 from core.board import GameState
-from sortedcontainers import SortedSet
 
 class MoveList:
     # moves should be a tuple
@@ -35,6 +33,7 @@ class MoveList:
 
     def transposition_hash(self):
         return tuple(self.list_hash)
+
 
 # P expansion node
 class PExpNode:
@@ -97,6 +96,8 @@ class PExpNode:
 
     transposition_access = 0
 
+    # creates a new PExpNode and appends it as a child
+    # will fish out of transposition table if it finds a suitable match
     # note this does NOT compute q for child
     def create_child(self, move, transposition_table):
         new_move_list = self.full_move_list.append(move)
@@ -105,6 +106,7 @@ class PExpNode:
         transposition_hash = new_move_list.transposition_hash()
         child_found = transposition_hash in transposition_table
         child = None
+        # transposed position exists
         if child_found:
             PExpNode.transposition_access += 1
             child = transposition_table[transposition_hash]
@@ -140,16 +142,9 @@ class PExpNode:
         self.assigned_q = True
 
         for parent in self.parents:
-            #if len(parent.children_with_q) == 0:
-            #    sign = -1 if parent.is_maximizing else 1
-            #    parent.children_with_q = SortedSet(key=lambda x: sign * x.move_goodness)
             parent.children_with_q.append(self)
 
         self.assign_move_goodness()
-
-        #self.recalculate_q()
-        #for parent in self.parents:
-        #    parent.recalculate_q()
 
     def assign_move_goodness(self):
         # play shorter sequences if advantageous, otherwise play longer sequences
@@ -176,14 +171,13 @@ class PExpNode:
     def depth(self):
         return len(self.full_move_list.moves)
 
+    # Computes a bottom-up recomputation of Q
     def recalculate_q(self):
-
-    # take the largest (or smallest) q across all seen moves
-
         # if this node is still a leaf, break
         if len(self.children_with_q) == 0:
             return
 
+        # we are going to have to frequently search for the max, so might as well sort while we're at it
         sign = 1 if self.is_maximizing else -1
         self.children_with_q.sort(key=lambda x: sign * x.move_goodness, reverse=True)
         self.best_child = self.children_with_q[0]

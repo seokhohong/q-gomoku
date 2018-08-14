@@ -240,11 +240,7 @@ class PExpMind:
                 break
         return principal_variations
 
-    # board perception will always be from the perspective of Player 1
-    # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
-
-    def p_search(self, board, root_node=None, save_root=True, consistency_check=False):
-        is_maximizing = True if board.player_to_move == 1 else False
+    def p_search(self, board, is_maximizing, root_node=None, save_root=True, consistency_check=False):
 
         if root_node is None:
             root_node = optimized_minimax.PExpNode(parent=None,
@@ -258,9 +254,6 @@ class PExpMind:
         # all nodes at the leaves of the search tree
         leaf_nodes = SortedList(principal_variations, key=lambda x: x.p_comparator)
 
-        #assert(len(leaf_nodes) == len(set(leaf_nodes)))
-
-        explored_states = 1
         i = 0
         MAXED_DURATION = 5
 
@@ -273,32 +266,36 @@ class PExpMind:
         while True:
             i += 1
 
-            # break eternal loop just in case
-            if i > self.max_iters * 5:
-                break
+            # the ways P search terminates
+            if i > self.max_iters:
+                # break if there's some hanging issue
+                if i > self.max_iters * 5:
+                    break
 
-            # same child has been best child for awhile now
-            if i > self.max_iters and len(set(best_children[-self._move_convergence_count: ])) == 1\
-                    and len(root_node.principal_variation.full_move_list) > self.required_depth:
-                break
+                # same child has been best child for awhile now
+                if len(set(best_children[-self._move_convergence_count:])) == 1\
+                        and len(root_node.principal_variation.full_move_list) > self.required_depth:
+                    break
+
+                if root_node.principal_variation.game_status == GameState.DRAW:
+                    break
 
             # searching doesn't get us anywhere for awhile
             if root_node.principal_variation and root_node.principal_variation.q:
                 best_children.append(root_node.best_child)
                 principal_qs.append(root_node.principal_variation.q)
+                # had the same best q for MAXED_DURATION iterations
                 if len(principal_qs) > MAXED_DURATION and np.abs(np.mean(principal_qs[-MAXED_DURATION : -1])) == 1:
                     print('Maxed Duration')
                     break
 
-            # p search
+            # p expansion
             self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed)
 
-            # don't need to prepare for next iteration
-
             principal_variations = self.pvs_k_principal_variations(leaf_nodes)
+
             # nothing left
             if not principal_variations:
-                print("Exhausted Search")
                 break
 
             # P will already have been expanded so do a Q eval
@@ -306,19 +303,13 @@ class PExpMind:
             self.q_eval(leaf_nodes)
 
             # this is used in case the p expansion doesn't capture the nodes we need to hit (if q_exp_batch_size is large enough this isn't needed)
-            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.q_exp_batch_size * 4, num_leaves=self.q_exp_batch_size)
+            #next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.p_exp_batch_size * 2, num_leaves=self.q_exp_batch_size)
 
-            print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations), len(set(next_pvs + principal_variations)))
-            principal_variations.extend(next_pvs)
+            #print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations), len(set(next_pvs + principal_variations)))
+            #principal_variations.extend(next_pvs)
 
             if consistency_check:
                 root_node.consistent_pv()
-
-            if root_node.principal_variation:
-                # each of these nodes will be a leaf with P=0, making them evaluated next time around
-                while root_node.principal_variation.has_children():
-                    self.q_eval([node for node in root_node.principal_variation.children.values()
-                                 if node.game_status == GameState.NOT_OVER and not node.has_children()])
 
             # this check doesn't hold if we do PV Q extensions
             #if root_node.principal_variation:
@@ -332,6 +323,7 @@ class PExpMind:
                 assert(not root_node.principal_variation.has_children())
                 principal_variations.append(root_node.principal_variation)
 
+            # remove duplicates
             principal_variations = set(principal_variations)
 
             print('Root', root_node.principal_variation)
@@ -353,7 +345,8 @@ class PExpMind:
 
     def highest_leaf_qs(self, leaf_nodes, is_maximizing, max_p_eval=100, num_leaves=10):
         num_eval = min(max_p_eval, len(leaf_nodes))
-        best_leaves = sorted([leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.assigned_q], key=lambda x: x.q, reverse=not is_maximizing)
+        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.assigned_q and leaf.game_status == GameState.NOT_OVER]
+        best_leaves = sorted(valid_leaves, key=lambda x: abs(x.q), reverse=True)
         return best_leaves[:num_leaves]
 
     def q_eval(self, nodes):
@@ -492,14 +485,14 @@ class PExpMind:
     def create_children(self, board, parent, sorted_moves, new_leaves, q_update, transposition_table):
         for move_index, log_p_prediction in sorted_moves:
             child_move = self.index_to_move(move_index)
-            if child_move in board.available_moves:
+            if board.is_move_available(*child_move):
                 child, made_new_child = parent.create_child(child_move, transposition_table)
                 if made_new_child:
                     board.move(child_move[0], child_move[1])
                     child.assign_p(log_p_prediction)
                     # if game is over, then we have our q
                     if board.game_won():
-                        winning_q = PExpNode.MIN_Q if board.player_to_move == Board.FIRST_PLAYER else PExpNode.MAX_Q
+                        winning_q = PExpNode.MIN_Q if board.get_player_to_move() == Board.FIRST_PLAYER else PExpNode.MAX_Q
                         child.assign_q(winning_q, GameState.WON)
                         q_update.add(parent)
 
@@ -518,14 +511,14 @@ class PExpMind:
                     q_update.add(parent)
 
     def q(self, board):
-        return self.value_est.predict([np.array([board.get_matrix().reshape(board.size, board.size, -1)])])[0][0]
+        return self.value_est.predict([np.array([board.get_matrix().reshape(self.size, self.size, -1)])])[0][0]
 
     def pick_random_move(self, board, possible_moves):
         picked_action = 0
 
         # abs is only there to handle floating point problems
         qs = np.array([node.q for _, node in possible_moves])
-        if board.player_to_move == 1:
+        if board.get_player_to_move() == 1:
             distribution = np.abs(qs + 1.0) / 2
         else:
             # not sure this is correct
@@ -557,13 +550,14 @@ class PExpMind:
     # returns whether game has concluded or not
     def make_move(self, board, as_player, verbose=True, epsilon=0.1, save_root=False):
         current_q = self.q(board)
-        assert(as_player == board.player_to_move)
+        assert(as_player == board.get_player_to_move())
 
         # incomplete
         starting_root = self.cleanse_memory_tree(self.memory_root, None, None)
 
         # array of [best_move, best_node], root node of move calculations
-        possible_moves, root_node = self.p_search(board, root_node=starting_root, save_root=save_root)
+        is_maximizing = True if board.get_player_to_move() == Board.FIRST_PLAYER else False
+        possible_moves, root_node = self.p_search(board, is_maximizing, root_node=starting_root, save_root=save_root)
 
         # best action is 0th index
         picked_action = 0

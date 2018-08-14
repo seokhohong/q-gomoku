@@ -11,7 +11,7 @@ if __name__ == "__main__":
     mind = no_mind.NoMind(size=3, epsilon=.1, alpha=0.3)
     for i in range(50000):
         round_board = board.Board(size=3, win_chain_length=3)
-        current_player = round_board.player_to_move
+        current_player = round_board._player_to_move
         print('Game', i)
         while True:
             result = mind.make_move(round_board, as_player=current_player)

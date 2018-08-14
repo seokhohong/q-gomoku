@@ -20,13 +20,13 @@ def versus(mind1, mind2, rounds=100):
         players[1] = mind1
         players[-1] = mind2
         while True:
-            result = players[tourney_board.player_to_move].make_move(tourney_board, as_player=tourney_board.player_to_move,
-                                                                     retrain=False, verbose=False, epsilon=0.01, max_depth=15,
-                                                                     max_iters=20)
+            result = players[tourney_board._player_to_move].make_move(tourney_board, as_player=tourney_board._player_to_move,
+                                                                      retrain=False, verbose=False, epsilon=0.01, max_depth=15,
+                                                                      max_iters=20)
             print(tourney_board.pprint())
             if result:
                 if tourney_board.game_won():
-                    wins[-tourney_board.player_to_move] += 1
+                    wins[-tourney_board._player_to_move] += 1
                 else:
                     draws += 1
                 break
