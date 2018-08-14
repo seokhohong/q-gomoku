@@ -35,7 +35,7 @@ def iter_function(i):
 
 def run():
     mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=4)
-    mind.load_net('../models/9_4_2')
+    mind.load_net('../models/9_8_14_18')
     #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
     #c_mind.load('conv_mind_200.pkl')
 
@@ -102,7 +102,7 @@ def run():
                 np.logical_and(depth < 4, p > -5),
                 np.logical_and(depth < 6, p > -4),
                 np.logical_and(depth < 8, p > -4)),
-                np.logical_and(depth < 10, p > -4)
+                np.logical_and(depth < np.inf, p > -3)
             )
 
         def permissive_expansion(depth):
