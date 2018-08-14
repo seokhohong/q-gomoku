@@ -39,7 +39,7 @@ class PExpMind:
         self._p_threshold = lambda depth, log_p: log_p > -10
         self._move_convergence_count = lambda depth: 5
 
-        self.k = 100
+        self.p_exp_batch_size = 100
         self.max_iters = 10
         self.required_depth = 4
 
@@ -94,8 +94,11 @@ class PExpMind:
         conv_2 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(bn2)
         bn3 = BatchNormalization()(conv_2)
+        conv_3 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
+        bn4 = BatchNormalization()(conv_3)
 
-        flat = Flatten()(bn3)
+        flat = Flatten()(bn4)
 
         hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
         bn_final = BatchNormalization()(hidden)
@@ -233,7 +236,7 @@ class PExpMind:
         for item in leaf_nodes:
             if item.game_status == GameState.NOT_OVER:
                 principal_variations.append(item)
-            if len(principal_variations) == self.k:
+            if len(principal_variations) == self.p_exp_batch_size:
                 break
         return principal_variations
 
@@ -302,8 +305,10 @@ class PExpMind:
             #self.q_eval_top_leaves(leaf_nodes, min_eval_q=k ** 2, max_eval_q=k ** 2)
             self.q_eval(leaf_nodes)
 
-            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.k ** 2, num_leaves=self.k)
+            # this is used in case the p expansion doesn't capture the nodes we need to hit (if q_exp_batch_size is large enough this isn't needed)
+            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.q_exp_batch_size * 4, num_leaves=self.q_exp_batch_size)
 
+            print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations), len(set(next_pvs + principal_variations)))
             principal_variations.extend(next_pvs)
 
             if consistency_check:
@@ -322,7 +327,7 @@ class PExpMind:
 
             # if we have a PV, add it to expand
             if root_node.principal_variation and root_node.principal_variation.game_status == GameState.NOT_OVER:
-                # pv could point to a 'stable' node
+                # pv could point to a 'stable' node that doesn't expand
                 #assert(root_node.principal_variation not in previously_removed)
                 assert(not root_node.principal_variation.has_children())
                 principal_variations.append(root_node.principal_variation)
@@ -409,12 +414,15 @@ class PExpMind:
 
     # p_threshold(depth, p) returns a boolean vector filter
     # max_expansion(depth) returns an integer
-    def define_policies(self, p_threshold, max_expansion, convergence_count, alpha=0.2, k=25, required_depth=4, max_iters=20):
+    def define_policies(self, p_threshold, max_expansion, convergence_count,
+                        alpha=0.2, p_exp_batch_size=25, q_exp_batch_size=25,
+                        required_depth=4, max_iters=20):
         self._p_threshold = p_threshold
         self._max_expansion = max_expansion
         self._move_convergence_count = convergence_count
 
-        self.k = k
+        self.p_exp_batch_size = p_exp_batch_size
+        self.q_exp_batch_size = q_exp_batch_size
         self.alpha = alpha
         self.required_depth = required_depth
         self.max_iters = max_iters
@@ -491,9 +499,6 @@ class PExpMind:
                     child.assign_p(log_p_prediction)
                     # if game is over, then we have our q
                     if board.game_won():
-                        # the player who last move won!
-                        if len(child.full_move_list.moves) == 1:
-                            print('win now')
                         winning_q = PExpNode.MIN_Q if board.player_to_move == Board.FIRST_PLAYER else PExpNode.MAX_Q
                         child.assign_q(winning_q, GameState.WON)
                         q_update.add(parent)
@@ -513,8 +518,7 @@ class PExpMind:
                     q_update.add(parent)
 
     def q(self, board):
-        prediction = self.value_est.predict([np.array([board.get_matrix().reshape(board.size, board.size, -1)])])[0][0]
-        return prediction
+        return self.value_est.predict([np.array([board.get_matrix().reshape(board.size, board.size, -1)])])[0][0]
 
     def pick_random_move(self, board, possible_moves):
         picked_action = 0
@@ -534,18 +538,7 @@ class PExpMind:
         return picked_action
 
     # used to pick a branch and fast forward it to use it as root node
-    def cleanse_memory_tree(self, root_node, moves):
-        root_node.parents = []
-        root_node.cleanse_memory(moves)
-
-    # with epsilon probability will select random move
-    # returns whether game has concluded or not
-    def make_move(self, board, as_player, verbose=True, epsilon=0.1, save_root=False):
-        current_q = self.q(board)
-        assert(as_player == board.player_to_move)
-
-        # incomplete
-        starting_root = None
+    def cleanse_memory_tree(self, board, root_node, moves):
         if self.memory_root is not None:
             # self-play
             if np.alltrue(np.equal(self.memory_root.get_matrix(), board.get_matrix())):
@@ -555,9 +548,22 @@ class PExpMind:
                     #print('Found Previous Child')
                     starting_root = child
                     break
+        #root_node.parents = []
+        #root_node.cleanse_memory(moves)
+
+        return None
+
+    # with epsilon probability will select random move
+    # returns whether game has concluded or not
+    def make_move(self, board, as_player, verbose=True, epsilon=0.1, save_root=False):
+        current_q = self.q(board)
+        assert(as_player == board.player_to_move)
+
+        # incomplete
+        starting_root = self.cleanse_memory_tree(self.memory_root, None, None)
 
         # array of [best_move, best_node], root node of move calculations
-        possible_moves, root_node = self.p_search(board, root_node=None, save_root=save_root)
+        possible_moves, root_node = self.p_search(board, root_node=starting_root, save_root=save_root)
 
         # best action is 0th index
         picked_action = 0
@@ -576,7 +582,9 @@ class PExpMind:
         best_move, best_node = possible_moves[0]
         best_q = best_node.q
 
+        # q update with learning rate self.alpha
         new_best_q = (1 - self.alpha) * current_q + self.alpha * best_q
+
         # compress to model valid range
         new_best_q = max(min(new_best_q, optimized_minimax.PExpNode.MAX_MODEL_Q), optimized_minimax.PExpNode.MIN_MODEL_Q)
 
@@ -584,7 +592,7 @@ class PExpMind:
         self.add_train_example(board, new_best_q, best_move)
 
         # picked move may not equal best move if we're making a suboptimal one
-        board.move(picked_move[0], picked_move[1])
+        board.move(*picked_move)
 
         self.memory_root = root_node.children[picked_move[0], picked_move[1]]
 

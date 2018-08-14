@@ -68,7 +68,7 @@ if __name__ == "__main__":
 
             possible_moves, root_node = mind.p_search(board, root_node=None)
 
-            mind.save_root(board, root_node)
+            mind.save_root(board, root_node, None)
             picked_move, picked_node = possible_moves[0]
             # add training example assuming best move
             move, best_node = possible_moves[0]

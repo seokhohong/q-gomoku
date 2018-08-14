@@ -47,8 +47,8 @@ def run():
         print('Game', i)
 
         # randomize the board a bit
-        #for j in range(rs.randint(0, 10)):
-        #    board.make_random_move()
+        for j in range(rs.randint(0, 10)):
+            board.make_random_move()
         #board.move(2, 2)
         #board.move(0, 1)
         #board.move(2, 3)
@@ -113,8 +113,8 @@ def run():
             return 3
 
         mind.define_policies(expanding_p, permissive_expansion, convergence_count=5,
-                             alpha = 0.2,
-                             k=SIZE ** 3, required_depth=6, max_iters=20)
+                             alpha=0.2, q_exp_batch_size=SIZE ** 2,
+                             p_exp_batch_size=SIZE ** 3, required_depth=6, max_iters=20)
 
         while True:
             result = mind.make_move(board,

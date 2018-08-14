@@ -153,22 +153,10 @@ class PExpNode:
 
     def assign_move_goodness(self):
         # play shorter sequences if advantageous, otherwise play longer sequences
-        #for parent in self.parents:
-        #    parent.children_with_q.remove(self)
-
         if self.q > 0:
             self.move_goodness = int(self.q * 1E6 - len(self.principal_variation.full_move_list))
         else:
             self.move_goodness = int(self.q * 1E6 + len(self.principal_variation.full_move_list))
-
-        #for parent in self.parents:
-        #    parent.children_with_q.add(self)
-    # def assign_move_goodness(self):
-    #     # play shorter sequences if advantageous, otherwise play longer sequences
-    #     if self.q > 0:
-    #         self.move_goodness = int(self.q * 1E6 - len(self.principal_variation.full_move_list))
-    #     else:
-    #         self.move_goodness = int(self.q * 1E6 + len(self.principal_variation.full_move_list))
 
     # ab cutoff for when we know we can
     # Not sure if it applies regardless of parent
