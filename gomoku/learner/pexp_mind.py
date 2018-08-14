@@ -311,19 +311,13 @@ class PExpMind:
             self.q_eval(leaf_nodes)
 
             # this is used in case the p expansion doesn't capture the nodes we need to hit (if q_exp_batch_size is large enough this isn't needed)
-            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.q_exp_batch_size * 4, num_leaves=self.q_exp_batch_size)
+            #next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.p_exp_batch_size * 2, num_leaves=self.q_exp_batch_size)
 
-            print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations), len(set(next_pvs + principal_variations)))
-            principal_variations.extend(next_pvs)
+            #print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations), len(set(next_pvs + principal_variations)))
+            #principal_variations.extend(next_pvs)
 
             if consistency_check:
                 root_node.consistent_pv()
-
-            if root_node.principal_variation:
-                # each of these nodes will be a leaf with P=0, making them evaluated next time around
-                while root_node.principal_variation.has_children():
-                    self.q_eval([node for node in root_node.principal_variation.children.values()
-                                 if node.game_status == GameState.NOT_OVER and not node.has_children()])
 
             # this check doesn't hold if we do PV Q extensions
             #if root_node.principal_variation:
@@ -358,7 +352,8 @@ class PExpMind:
 
     def highest_leaf_qs(self, leaf_nodes, is_maximizing, max_p_eval=100, num_leaves=10):
         num_eval = min(max_p_eval, len(leaf_nodes))
-        best_leaves = sorted([leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.assigned_q], key=lambda x: x.q, reverse=not is_maximizing)
+        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.assigned_q and leaf.game_status == GameState.NOT_OVER]
+        best_leaves = sorted(valid_leaves, key=lambda x: abs(x.q), reverse=True)
         return best_leaves[:num_leaves]
 
     def q_eval(self, nodes):

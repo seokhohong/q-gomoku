@@ -127,7 +127,6 @@ def run():
                 current_player = Board.FIRST_PLAYER
             if result:
                 break
-            return
 
         print('done')
 if __name__ == "__main__":
