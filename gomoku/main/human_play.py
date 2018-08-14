@@ -12,7 +12,7 @@ SIZE = 9
 CHANNELS = 4
 
 if __name__ == "__main__":
-    mind = pexp_mind.PExpMind(size=SIZE, alpha=0.2, init=False, channels=CHANNELS)
+    mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=CHANNELS)
     mind.load_net('../models/9_4_4')
 
 
@@ -32,7 +32,10 @@ if __name__ == "__main__":
             return 5
         return 3
 
-    mind.define_policies(expanding_p, permissive_expansion, convergence_count=5)
+
+    mind.define_policies(expanding_p, permissive_expansion, convergence_count=5,
+                         alpha=0.2, q_exp_batch_size=SIZE ** 2,
+                         p_exp_batch_size=SIZE ** 3, required_depth=6, max_iters=20)
 
     board = Board(size=SIZE, win_chain_length=5)
 
@@ -66,9 +69,8 @@ if __name__ == "__main__":
         else:
             print('Computer is thinking...')
 
-            possible_moves, root_node = mind.p_search(board, root_node=None)
+            possible_moves, root_node = mind.p_search(board, root_node=None, save_root=True)
 
-            mind.save_root(board, root_node, None)
             picked_move, picked_node = possible_moves[0]
             # add training example assuming best move
             move, best_node = possible_moves[0]

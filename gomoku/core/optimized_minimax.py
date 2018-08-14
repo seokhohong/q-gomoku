@@ -97,6 +97,8 @@ class PExpNode:
 
     transposition_access = 0
 
+    # creates a new PExpNode and appends it as a child
+    # will fish out of transposition table if it finds a suitable match
     # note this does NOT compute q for child
     def create_child(self, move, transposition_table):
         new_move_list = self.full_move_list.append(move)
@@ -105,6 +107,7 @@ class PExpNode:
         transposition_hash = new_move_list.transposition_hash()
         child_found = transposition_hash in transposition_table
         child = None
+        # transposed position exists
         if child_found:
             PExpNode.transposition_access += 1
             child = transposition_table[transposition_hash]

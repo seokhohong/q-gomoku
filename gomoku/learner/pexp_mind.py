@@ -273,14 +273,19 @@ class PExpMind:
         while True:
             i += 1
 
-            # break eternal loop just in case
-            if i > self.max_iters * 5:
-                break
+            # the ways P search terminates
+            if i > self.max_iters:
+                # break if there's some hanging issue
+                if i > self.max_iters * 5:
+                    break
 
-            # same child has been best child for awhile now
-            if i > self.max_iters and len(set(best_children[-self._move_convergence_count: ])) == 1\
-                    and len(root_node.principal_variation.full_move_list) > self.required_depth:
-                break
+                # same child has been best child for awhile now
+                if len(set(best_children[-self._move_convergence_count:])) == 1\
+                        and len(root_node.principal_variation.full_move_list) > self.required_depth:
+                    break
+
+                if root_node.principal_variation.game_status == GameState.DRAW:
+                    break
 
             # searching doesn't get us anywhere for awhile
             if root_node.principal_variation and root_node.principal_variation.q:
