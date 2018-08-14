@@ -46,7 +46,7 @@ if __name__ == "__main__":
     print(board.guide_print())
 
     while True:
-        if board.player_to_move == Board.FIRST_PLAYER:
+        if board._player_to_move == Board.FIRST_PLAYER:
             inp = input("Input your move (i.e. \"3 5\"): ")
             if len(inp.split(' ')) != 2:
                 print('Incorrect number of coordinates, please try again!')
@@ -61,7 +61,7 @@ if __name__ == "__main__":
             if x < 0 or x >= SIZE or y < 0 or y >= SIZE:
                 print('Out of bounds!')
                 continue
-            if (x, y) not in board.available_moves:
+            if (x, y) not in board._available_moves:
                 print('Invalid Move!')
                 continue
             result = board.move(x, y)
@@ -90,7 +90,7 @@ if __name__ == "__main__":
             break
 
         if board.game_won():
-            if board.player_to_move == 1:
+            if board._player_to_move == 1:
                 print('COMPUTER WINS!')
             else:
                 print('YOU WIN!')

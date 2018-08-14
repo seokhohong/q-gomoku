@@ -95,7 +95,7 @@ def run():
         # board.move(8, 7)
 
         print(board)
-        current_player = board.player_to_move
+        current_player = board._player_to_move
 
         def expanding_p(depth, p):
             return np.logical_or(np.logical_or(

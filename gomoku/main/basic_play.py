@@ -10,7 +10,7 @@ if __name__ == "__main__":
     #no_mind = no_mind.NoMind(size=3, epsilon=.1, alpha=0.2)
     for i in range(1000):
         round_board = board.Board(size=3, win_chain_length=3)
-        current_player = round_board.player_to_move
+        current_player = round_board._player_to_move
         print('Game', i)
         if i % 100 == 1:
             vectors = []

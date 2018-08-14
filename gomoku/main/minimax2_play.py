@@ -43,7 +43,7 @@ def dump_training(mind):
     print('Dump')
     temp_board = board.Board(size=SIZE)
     for vector, label in zip(mind.train_vectors[:100], mind.train_labels[:100]):
-        temp_board.matrix = np.array(vector[:-1]).reshape(SIZE, SIZE)
+        temp_board._matrix = np.array(vector[:-1]).reshape(SIZE, SIZE)
         print(temp_board.pprint(), label, 'TURN: ', vector[-1])
 
 
@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
     for i in range(5000):
         round_board = board.Board(size=SIZE, win_chain_length=4)
-        current_player = round_board.player_to_move
+        current_player = round_board._player_to_move
         print('Game', i)
         #if i % 10 == 0:
         #    dump_training(mind)

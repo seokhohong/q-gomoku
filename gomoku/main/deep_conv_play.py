@@ -39,7 +39,7 @@ def run():
         for i in range(random.randint(0, 3)):
             round_board.make_random_move()
 
-        current_player = round_board.player_to_move
+        current_player = round_board._player_to_move
 
         #    versus(c_mind, mind)
         #if i % 50 == 0 and i > 0:

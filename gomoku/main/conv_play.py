@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     for i in range(5000):
         round_board = board.Board(size=SIZE, win_chain_length=4)
-        current_player = round_board.player_to_move
+        current_player = round_board._player_to_move
         print('Game', i)
         if i % 100 == 0 and i > 0:
             copy_mind = conv_mind.ConvMind(size=SIZE, alpha=0.3)

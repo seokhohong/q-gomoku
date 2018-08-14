@@ -9,7 +9,7 @@ if __name__ == "__main__":
     mind = basic_mind.BasicMind(size=3, epsilon=.1, alpha=1)
     for i in range(5000):
         round_board = board.Board(size=3, win_chain_length=3)
-        current_player = round_board.player_to_move
+        current_player = round_board._player_to_move
         print('Game', i)
         if i % 10 == 1:
             train_vectors = []
