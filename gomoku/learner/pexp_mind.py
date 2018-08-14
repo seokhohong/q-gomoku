@@ -240,7 +240,7 @@ class PExpMind:
                 break
         return principal_variations
 
-    def p_search(self, board, is_maximizing, root_node=None, save_root=True, consistency_check=False):
+    def p_search(self, board, is_maximizing, root_node=None, save_root=True, consistency_check=False, verbose=True):
 
         if root_node is None:
             root_node = optimized_minimax.PExpNode(parent=None,
@@ -286,11 +286,12 @@ class PExpMind:
                 principal_qs.append(root_node.principal_variation.q)
                 # had the same best q for MAXED_DURATION iterations
                 if len(principal_qs) > MAXED_DURATION and np.abs(np.mean(principal_qs[-MAXED_DURATION : -1])) == 1:
-                    print('Maxed Duration')
+                    if verbose:
+                        print('Maxed Duration')
                     break
 
             # p expansion
-            self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed)
+            self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed, verbose=True)
 
             principal_variations = self.pvs_k_principal_variations(leaf_nodes)
 
@@ -366,8 +367,7 @@ class PExpMind:
 
         # attach q predictions to all leaves and compute q tree at once
         q_predictions = np.clip(
-                    self.value_est.predict(np.array(board_matrices),
-                                                        batch_size=1000).reshape(len(board_matrices)),
+                    self.value_est.predict(np.array(board_matrices), batch_size=1000).reshape(len(board_matrices)),
                     a_max=optimized_minimax.PExpNode.MAX_MODEL_Q,
                     a_min=optimized_minimax.PExpNode.MIN_MODEL_Q
             )
@@ -395,7 +395,7 @@ class PExpMind:
                 p_search_vectors.append(parent.get_matrix())
             else:
                 for move in parent.full_move_list.moves:
-                    board.blind_move(move[0], move[1])
+                    board.blind_move(*move)
 
                 p_search_vectors.append(board.get_matrix())
 
@@ -421,7 +421,7 @@ class PExpMind:
         self.max_iters = max_iters
     # Expand all nodes_to_expand, updating leaf_nodes in place
     # Also passes
-    def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table, previously_removed):
+    def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table, previously_removed, verbose=True):
         for parent in nodes_to_expand:
             if parent in previously_removed:
                 continue
@@ -452,7 +452,8 @@ class PExpMind:
         threshold_filter = self._p_threshold(zipped_predictions[:, 1], zipped_predictions[:, 3])
         filtered_predictions = zipped_predictions[threshold_filter]
 
-        print('Num P over threshold', len(filtered_predictions), 'out of', (len(nodes_to_expand) * self.size ** 2))
+        if verbose:
+            print('Num P over threshold', len(filtered_predictions), 'out of', (len(nodes_to_expand) * self.size ** 2))
 
         new_leaves = []
         q_update = set()
@@ -463,8 +464,10 @@ class PExpMind:
         # i is the parent meta index, index of parent index
         for i, parent_index in enumerate(unique_parents):
             parent = p_search_nodes[int(parent_index)]
+
+            # build out the position really quickly (without checking if the game's over, since we know this is a valid position)
             for move in parent.full_move_list.moves:
-                board.blind_move(move[0], move[1])
+                board.blind_move(*move)
 
             max_move_indices = move_indices[i + 1] if i < len(unique_parents) - 1 else filtered_predictions.shape[0]
             sorted_moves = sorted(filtered_predictions[move_indices[i]:max_move_indices, 2:4], key=lambda x: x[1], reverse=True)
@@ -557,7 +560,8 @@ class PExpMind:
 
         # array of [best_move, best_node], root node of move calculations
         is_maximizing = True if board.get_player_to_move() == Board.FIRST_PLAYER else False
-        possible_moves, root_node = self.p_search(board, is_maximizing, root_node=starting_root, save_root=save_root)
+        possible_moves, root_node = self.p_search(board, is_maximizing, root_node=starting_root,
+                                                  save_root=save_root, verbose=verbose)
 
         # best action is 0th index
         picked_action = 0
@@ -618,8 +622,6 @@ class PExpMind:
         board_vectors = board.get_rotated_matrices()
 
         for i, vector in enumerate(board_vectors):
-            if abs(result) > 0.999:
-                print('won')
             self.train_vectors.append(vector)
             self.train_q.append(result)
             # get the i'th rotation
