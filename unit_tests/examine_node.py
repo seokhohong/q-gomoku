@@ -93,7 +93,7 @@ def print_board(matrix):
         board_string += "|"
     return board_string
 
-node_num = 3782489326635985000
+node_num = 1091314466275624328
 with open(str(node_num) + '.pkl', 'rb') as f:
     root_node = pickle.load(f)
 
