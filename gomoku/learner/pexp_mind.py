@@ -291,7 +291,7 @@ class PExpMind:
                     break
 
             # p expansion
-            self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed, verbose=True)
+            self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed, verbose=verbose)
 
             principal_variations = self.pvs_k_principal_variations(leaf_nodes)
 

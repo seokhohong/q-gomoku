@@ -68,7 +68,7 @@ if __name__ == "__main__":
         else:
             print('Computer is thinking...')
 
-            possible_moves, root_node = mind.p_search(board, False, root_node=None, save_root=False)
+            possible_moves, root_node = mind.p_search(board, False, root_node=None, save_root=False, verbose=False)
 
             best_move, best_node = possible_moves[0]
             print(" ")
