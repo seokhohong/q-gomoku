@@ -1,9 +1,0 @@
-name: qgomoku
-dependencies:
-  - python>=3.6
-  - numpy
-  - tensorflow
-  - keras
-  - sortedcontainers
-  - pip:
-    - pyspark==2.1.2
