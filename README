@@ -18,7 +18,8 @@ How to play against a pre-trained Q-Gomoku:
 
 	1. Open terminal
 	2. git clone https://github.com/seokhohong/q-gomoku.git
-	3. python gomoku/play_me.py
+	3. cd q-gomoku
+	4. python gomoku/play_me.py
 
 
 How to understand what it's doing (Below is example output):
