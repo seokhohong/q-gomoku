@@ -1,0 +1,88 @@
+Q-Gomoku
+
+Q-Gomoku is an AlphaGo/AlphaZero inspired program trained to play the game of Gomoku at a super-human level. Deep Q Learning is a reinforcement learning technique augmented by deep learning so that just by simply playing the game over and over again, it can improve upon its mistakes and perfect its gameplay.
+
+Gomoku is a simple game, an extension of Tic-Tac-Toe if you will. In this variation, the goal is to get five of your stones in a row before your opponent on a 9x9 board.
+
+
+How it works:
+
+Q-Gomoku performs batch simulation and batch training. It plays 1000 games against itself and then proceeds to learn from it. The first 1000 games are random, and sometimes by chance it will line up 5 in a row and those games will be marked by a win or a loss as opposed to a draw. Then the 1000 games and all of its positions are used to train a model to recognize a won or lost position. Then it plays another 1000 games, this time with a small sense of what a winning position looks like. This continues until it has mastered the game.
+
+
+How to play against a pre-trained Q-Gomoku:
+
+	Requirements:
+		Python 3 (Not Python 3.7, it has Tensorflow compatibility issues right now)
+			Install Numpy, Keras, Tensorflow
+
+	1. Open terminal
+	2. git clone https://github.com/seokhohong/q-gomoku.git
+	3. python gomoku/play_me.py
+
+
+How to understand what it's doing (Below is example output):
+
+The game is played on a 9x9 board, where you are 'x' and the opponent is 'o'. The board will start out randomized so that each game is different.
+
+Q-Gomoku will iteratively search intelligently through the space of possible moves and at the end output something like : (5, 4) Q: -0.21178427
+
+The Q-score indicates how good the computer thinks its position is. -1 means it's won and 1 means you've won. -0.211 means that it considers itself to be in a somewhat advantageous position.
+
+The P-score is not particularly meaningful in this context, it is the likelihood that the given move sequence will be played. It's very helpful for Q-Gomoku internally to prioritize which moves to consider during its thinking process.
+
+The Root PV (principal variation) is what Q-gomoku thinks is the optimal sequence of moves for both you and the computer. Yes, it can think very far ahead.
+
+
+
+  0 1 2 3 4 5 6 7 8
+0| | | | | | | | | |
+1| | | | | | | | | |
+2| | | | | | | | | |
+3| | | | |o| | | | |
+4| | | | | | | | | |
+5| | |x| | | |o|x| |
+6|o|x|x| | | |o| | |
+7| | | | | | | |x| |
+8| | | | |o| | |X| |
+Computer is thinking...
+Root PV: ((5, 4),) Q: -0.3031 P: -1.2953
+Root PV: ((6, 4), (2, 4)) Q: -0.2350 P: -4.6881
+Root PV: ((6, 4), (7, 4), (7, 6)) Q: -0.3175 P: -3.9400
+Root PV: ((6, 4), (7, 6), (7, 4), (2, 4)) Q: -0.1874 P: -7.6552
+Root PV: ((6, 4), (6, 3), (4, 4), (7, 6), (7, 4)) Q: -0.3054 P: -6.8502
+Root PV: ((4, 4), (7, 6), (7, 4), (5, 4), (6, 4), (6, 3)) Q: -0.2180 P: -8.7383
+Root PV: ((6, 4), (7, 4), (7, 6), (6, 3), (4, 4), (2, 4)) Q: -0.3100 P: -10.7130
+Root PV: ((6, 4), (6, 3), (6, 7), (6, 8), (4, 4), (5, 4), (4, 5), (4, 6)) Q: -0.2174 P: -8.5668
+Root PV: ((6, 4), (6, 3), (4, 4), (5, 4), (4, 5), (4, 6), (3, 3), (3, 6)) Q: -0.2689 P: -10.7568
+Root PV: ((5, 4), (2, 4), (2, 3), (7, 6), (7, 4), (2, 7), (2, 8), (4, 4)) Q: -0.1945 P: -11.9058
+Root PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (3, 2), (2, 1), (5, 5)) Q: -0.3147 P: -11.2280
+Root PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (6, 7), (6, 8), (3, 2), (2, 1)) Q: -0.3164 P: -9.3957
+Root PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (6, 7), (6, 8), (3, 2), (2, 1), (5, 5)) Q: -0.3026 P: -10.4624
+Root PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (6, 7), (6, 8), (3, 2), (2, 1), (5, 3)) Q: -0.2552 P: -11.4397
+Root PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (3, 2), (2, 1), (5, 3)) Q: -0.2352 P: -12.3136
+Root PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (3, 2), (2, 1), (5, 5), (5, 7)) Q: -0.2133 P: -13.1822
+Root PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (3, 2), (2, 1), (5, 5), (5, 3)) Q: -0.2725 P: -11.5253
+Root PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (3, 2), (2, 1), (5, 5), (5, 3), (4, 6)) Q: -0.2769 P: -13.9027
+Root PV: ((6, 4), (6, 3), (7, 4), (4, 4), (5, 4), (7, 6), (3, 2), (2, 1), (5, 6)) Q: -0.2440 P: -12.2718
+Root PV: ((5, 4), (2, 4), (2, 3), (7, 6), (7, 4), (2, 7), (2, 8), (4, 4), (3, 2)) Q: -0.2118 P: -13.9397
+Explored 90567 States (Q evals: 90568) in 21 Iterations
+Move (5, 4) PV: ((5, 4), (2, 4), (2, 3), (7, 6), (7, 4), (2, 7), (2, 8), (4, 4), (3, 2)) Q: -0.2118 P: -13.9397
+Move (6, 4) PV: ((6, 4), (7, 6), (7, 4), (6, 3), (5, 6), (4, 7), (5, 4), (4, 4), (6, 7), (6, 8), (3, 2), (2, 1), (2, 3), (1, 4)) Q: -0.2000 P: -12.6881
+Move (6, 3) PV: ((6, 3), (6, 4), (5, 3), (7, 6), (7, 4), (2, 4), (2, 3), (3, 3), (7, 3), (8, 3), (5, 2)) Q: -0.1863 P: -12.6212
+Move (4, 4) PV: ((4, 4), (2, 4), (2, 3), (2, 7), (2, 8), (7, 6), (7, 4), (4, 6), (5, 6)) Q: -0.1573 P: -11.8661
+Move (2, 4) PV: ((2, 4), (3, 6), (5, 4), (7, 6), (7, 4), (4, 6)) Q: -0.1284 P: -13.2977
+Move (7, 6) PV: ((6, 4), (5, 4), (4, 6), (6, 3), (7, 6)) Q: -0.1074 P: -12.7413
+Move (7, 4) PV: ((7, 4), (5, 4), (6, 4), (6, 3), (5, 6), (4, 7), (4, 6), (3, 6), (4, 5), (1, 4), (7, 6), (8, 6), (4, 4)) Q: -0.1041 P: -13.4885
+ 
+(5, 4) Q: -0.21178427
+  0 1 2 3 4 5 6 7 8
+0| | | | | | | | | |
+1| | | | | | | | | |
+2| | | | | | | | | |
+3| | | | |o| | | | |
+4| | | | | |O| | | |
+5| | |x| | | |o|x| |
+6|o|x|x| | | |o| | |
+7| | | | | | | |x| |
+8| | | | |o| | |x| |
