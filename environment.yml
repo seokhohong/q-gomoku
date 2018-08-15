@@ -6,4 +6,4 @@ dependencies:
   - keras
   - sortedcontainers
   - pip:
-    - pyspark==2.1.2
+- pyspark==2.1.2
