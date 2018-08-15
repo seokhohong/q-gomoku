@@ -7,7 +7,7 @@ Gomoku is a simple game, an extension of Tic-Tac-Toe if you will. In this variat
 
 How it works:
 
-Q-Gomoku performs batch simulation and batch training. It plays 1000 games against itself and then proceeds to learn from it. The first 1000 games are random, and sometimes by chance it will line up 5 in a row and those games will be marked by a win or a loss as opposed to a draw. Then the 1000 games and all of its positions are used to train a model to recognize a won or lost position. Then it plays another 1000 games, this time with a small sense of what a winning position looks like. This continues until it has mastered the game.
+Q-Gomoku performs batch simulation and batch training. It plays 1000 games against itself and then proceeds to learn from it. The first 1000 games are random, and sometimes by chance it will line up 5 in a row and those games will be marked by a win or a loss as opposed to a draw. Then the 1000 games and all of its positions are used to train a model to recognize a won or lost position. Then it plays another 1000 games, this time with a small sense of what a winning position looks like. It propagates an understanding of sequence backwards so that it learns that slightly advantageous positions can lead to substantially advantageous positions, and so on. This continues until it has mastered the game.
 
 
 How to play against a pre-trained Q-Gomoku:
