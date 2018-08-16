@@ -73,12 +73,11 @@ def run():
         current_player = board._player_to_move
 
         def expanding_p(depth, p):
-            return np.logical_or(np.logical_or(
+            return np.logical_or.reduce([
                 np.logical_and(depth < 4, p > -5),
                 np.logical_and(depth < 6, p > -4),
-                np.logical_and(depth < 8, p > -4)),
                 np.logical_and(depth < np.inf, p > -3)
-            )
+            ])
 
         def permissive_expansion(depth):
             if depth < 2:

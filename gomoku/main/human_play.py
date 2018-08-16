@@ -15,13 +15,11 @@ if __name__ == "__main__":
 
 
     def expanding_p(depth, p):
-        return np.logical_or(np.logical_or(
+        return np.logical_or.reduce([
             np.logical_and(depth < 4, p > -5),
             np.logical_and(depth < 6, p > -4),
-            np.logical_and(depth < 8, p > -4)),
             np.logical_and(depth < np.inf, p > -3)
-        )
-
+        ])
 
     def permissive_expansion(depth):
         if depth < 2:
@@ -67,7 +65,7 @@ if __name__ == "__main__":
         else:
             print('Computer is thinking...')
 
-            possible_moves, root_node = mind.p_search(board, False, root_node=None, save_root=False)
+            possible_moves, root_node = mind.p_search(board, False, root_node=None, save_root=True)
 
             best_move, best_node = possible_moves[0]
             print(" ")

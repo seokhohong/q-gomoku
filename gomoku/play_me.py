@@ -14,14 +14,12 @@ if __name__ == "__main__":
     mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=CHANNELS)
     mind.load_net('trained_models/9_8_14_18')
 
-
     def expanding_p(depth, p):
         return np.logical_or.reduce([
-                np.logical_and(depth < 4, p > -5),
-                np.logical_and(depth < 6, p > -4),
-                np.logical_and(depth < 8, p > -4),
-                np.logical_and(depth < np.inf, p > -3)
-            ])
+            np.logical_and(depth < 4, p > -5),
+            np.logical_and(depth < 6, p > -4),
+            np.logical_and(depth < np.inf, p > -3)
+        ])
 
 
     def permissive_expansion(depth):
