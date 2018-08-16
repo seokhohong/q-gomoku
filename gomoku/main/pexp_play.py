@@ -1,16 +1,8 @@
 from learner import pexp_mind
-from learner import deep_conv_mind
-from core import detail_board
 from core.board import Board
-from copy import deepcopy
-from collections import defaultdict
-from learner import conv_mind
-import random
 
 from numpy.random import RandomState
-from sklearn.metrics import mean_absolute_error
 import numpy as np
-import keras
 
 import cProfile
 
@@ -18,30 +10,13 @@ minds = []
 
 SIZE = 9
 
-def depth_function(i):
-    if i < 500:
-        return 1
-    elif i < 1000:
-        return 2
-    return 15
-
-def iter_function(i):
-    if i < 500:
-        return 1
-    elif i < 1000:
-        return 10
-    elif i < 2000:
-        return 20
-
 def run():
     mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=4)
     mind.load_net('../models/9_8_14_18')
-    #c_mind = conv_mind.ConvMind(size=5, alpha=0.9)
-    #c_mind.load('conv_mind_200.pkl')
 
     rs = RandomState(42)
 
-    for i in range(50000):
+    for i in range(50):
         board = Board(size=SIZE, win_chain_length=5)
 
         print('Game', i)

@@ -5,13 +5,6 @@ import random
 
 from util import utils
 
-class Move:
-    def __init__(self, player, x, y):
-        self.player = player
-        self.x = x
-        self.y = y
-
-
 class GameState:
     WON = 1
     DRAW = 2
@@ -34,7 +27,6 @@ class Board:
 
         # three for No Player, Player 1, Player 2, one for turn index
         self._matrix = np.zeros((self._size, self._size, 4), dtype=np.int)
-        self._matrix[:, :, Board.NO_PLAYER].fill(1)
 
         # tracks which player played which spot (optimization
         self._which_stone = np.zeros((self._size, self._size), dtype=np.int)
@@ -49,7 +41,7 @@ class Board:
             for j in range(self._size):
                 self._available_moves.add((i, j))
 
-        self.cached_point_rotations = defaultdict(list)
+        self._cached_point_rotations = defaultdict(list)
         self._cache_rotations()
 
         self._num_moves = 0
@@ -111,13 +103,13 @@ class Board:
             ]:
             for x in range(self._size):
                 for y in range(self._size):
-                    self.cached_point_rotations[matrix[x, y]].append(indices[x, y])
+                    self._cached_point_rotations[matrix[x, y]].append(indices[x, y])
 
     def coordinate_to_index(self, x, y):
         return x * self._size + y
 
     def get_rotated_point(self, index):
-        return self.cached_point_rotations[index]
+        return self._cached_point_rotations[index]
 
     # Places a stone at x, y for the next player's turn
     # Does not compute whether the game has completed or not (performance optimization)

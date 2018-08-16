@@ -1,21 +1,13 @@
-import copy
-
-import numpy as np
-from keras.layers import Input, Convolution2D, Dense, Dropout, Flatten, concatenate, BatchNormalization
-from keras.models import Model  # basic class for specifying and training a neural network
-from keras import losses
-import keras
-import pandas as pd
-import tensorflow as tf
-
-from sortedcontainers import SortedSet
 import pickle
-from sortedcontainers import SortedList
 
-from core.board import GameState
-from core.board import Board
-from core import optimized_minimax
-from core.optimized_minimax import PExpNode
+import keras
+import numpy as np
+from core.board import Board, GameState
+from core.minimax import PExpNode
+from keras import losses
+from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalization
+from keras.models import Model  # basic class for specifying and training a neural network
+from sortedcontainers import SortedList
 
 
 class PExpMind:
@@ -47,9 +39,7 @@ class PExpMind:
         init_examples = 10
 
         if init:
-            sample_x = [
-                            np.random.randint(-1, 1, size=(init_examples, size, size, self.channels))
-                        ]
+            sample_x = [np.random.randint(-1, 1, size=(init_examples, size, size, self.channels))]
             self.value_est.fit(sample_x, y=np.zeros(init_examples), epochs=1, batch_size=100)
             self.policy_est.fit(sample_x, y=np.zeros((init_examples, self.size ** 2)))
 
