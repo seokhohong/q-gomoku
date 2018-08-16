@@ -12,7 +12,7 @@ SIZE = 9
 
 def run():
     mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=4)
-    mind.load_net('../models/9_8_14_18')
+    mind.load_net('../models/9_4_4')
 
     rs = RandomState(42)
 
@@ -75,7 +75,7 @@ def run():
         def expanding_p(depth, p):
             return np.logical_or.reduce([
                 np.logical_and(depth < 2, p > -6),
-                np.logical_and(depth < 4, p > -5),
+                np.logical_and(depth < 4, p > -4),
                 np.logical_and(depth < 6, p > -4),
                 np.logical_and(depth < np.inf, p > -3)
             ])
@@ -94,7 +94,7 @@ def run():
         while True:
             result = mind.make_move(board,
                                     as_player=current_player,
-                                    epsilon=0.1)
+                                    epsilon=0.1, verbose=True)
             print(board.pprint())
             if current_player == Board.FIRST_PLAYER:
                 current_player = Board.SECOND_PLAYER

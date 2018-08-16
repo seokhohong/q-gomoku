@@ -295,9 +295,9 @@ class PExpMind:
             self.q_eval(leaf_nodes)
 
             # this is used in case the p expansion doesn't capture the nodes we need to hit (if q_exp_batch_size is large enough this isn't needed)
-            #next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.p_exp_batch_size * 2, num_leaves=self.q_exp_batch_size)
+            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.p_exp_batch_size * 2, num_leaves=self.q_exp_batch_size)
+            print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations), len(set(next_pvs + principal_variations)))
 
-            #print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations), len(set(next_pvs + principal_variations)))
             #principal_variations.extend(next_pvs)
 
             if consistency_check:
