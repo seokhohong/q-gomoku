@@ -4,6 +4,7 @@ import keras
 import numpy as np
 from core.board import Board, GameState
 from core.minimax import PExpNode
+from core import minimax
 from keras import losses
 from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalization
 from keras.models import Model  # basic class for specifying and training a neural network
@@ -233,9 +234,9 @@ class PExpMind:
     def p_search(self, board, is_maximizing, root_node=None, save_root=True, consistency_check=False, verbose=True):
 
         if root_node is None:
-            root_node = optimized_minimax.PExpNode(parent=None,
+            root_node = PExpNode(parent=None,
                                                 is_maximizing=is_maximizing,
-                                                full_move_list=optimized_minimax.MoveList(moves=(), position_hash=[]))
+                                                full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
         principal_variations = [root_node]
 
@@ -358,8 +359,8 @@ class PExpMind:
         # attach q predictions to all leaves and compute q tree at once
         q_predictions = np.clip(
                     self.value_est.predict(np.array(board_matrices), batch_size=1000).reshape(len(board_matrices)),
-                    a_max=optimized_minimax.PExpNode.MAX_MODEL_Q,
-                    a_min=optimized_minimax.PExpNode.MIN_MODEL_Q
+                    a_max=PExpNode.MAX_MODEL_Q,
+                    a_min=PExpNode.MIN_MODEL_Q
             )
 
         for i, leaf in enumerate(nodes):
@@ -574,7 +575,7 @@ class PExpMind:
         new_best_q = (1 - self.alpha) * current_q + self.alpha * best_q
 
         # compress to model valid range
-        new_best_q = max(min(new_best_q, optimized_minimax.PExpNode.MAX_MODEL_Q), optimized_minimax.PExpNode.MIN_MODEL_Q)
+        new_best_q = max(min(new_best_q, PExpNode.MAX_MODEL_Q), PExpNode.MIN_MODEL_Q)
 
         print(current_q, best_q)
         self.add_train_example(board, new_best_q, best_move)
