@@ -1,7 +1,7 @@
 
 from learner import pexp_mind
 from core.board import Board
-from core.minimax import PExpNode
+from core.optimized_minimax import PExpNode
 import numpy as np
 
 import random
@@ -68,7 +68,7 @@ if __name__ == "__main__":
         else:
             print('Computer is thinking...')
 
-            possible_moves, root_node = mind.p_search(board, False, root_node=None, save_root=False, verbose=False)
+            possible_moves, root_node = mind.p_search(board, False, root_node=None, save_root=False)
 
             best_move, best_node = possible_moves[0]
             print(" ")
