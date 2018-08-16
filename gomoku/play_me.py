@@ -16,12 +16,12 @@ if __name__ == "__main__":
 
 
     def expanding_p(depth, p):
-        return np.logical_or(np.logical_or(
-            np.logical_and(depth < 4, p > -5),
-            np.logical_and(depth < 6, p > -4),
-            np.logical_and(depth < 8, p > -4)),
-            np.logical_and(depth < np.inf, p > -3)
-        )
+        return np.logical_or.reduce([
+                np.logical_and(depth < 4, p > -5),
+                np.logical_and(depth < 6, p > -4),
+                np.logical_and(depth < 8, p > -4),
+                np.logical_and(depth < np.inf, p > -3)
+            ])
 
 
     def permissive_expansion(depth):
@@ -34,7 +34,7 @@ if __name__ == "__main__":
 
     mind.define_policies(expanding_p, permissive_expansion, convergence_count=5,
                          alpha=0.2, q_exp_batch_size=SIZE ** 2,
-                         p_exp_batch_size=SIZE ** 3, required_depth=6, max_iters=20)
+                         p_exp_batch_size=SIZE ** 3, required_depth=6, max_iters=25)
 
     board = Board(size=SIZE, win_chain_length=5)
 
