@@ -1,7 +1,7 @@
 
 from learner import pexp_mind
 from core.board import Board
-from core.optimized_minimax import PExpNode
+from core.minimax import PExpNode
 import numpy as np
 
 import random
