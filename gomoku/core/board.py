@@ -5,6 +5,13 @@ import random
 
 from util import utils
 
+class Move:
+    def __init__(self, player, x, y):
+        self.player = player
+        self.x = x
+        self.y = y
+
+
 class GameState:
     WON = 1
     DRAW = 2
