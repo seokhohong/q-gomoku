@@ -70,10 +70,11 @@ def run():
         # board.move(8, 7)
 
         print(board)
-        current_player = board._player_to_move
+        current_player = board.get_player_to_move()
 
         def expanding_p(depth, p):
             return np.logical_or.reduce([
+                np.logical_and(depth < 2, p > -6),
                 np.logical_and(depth < 4, p > -5),
                 np.logical_and(depth < 6, p > -4),
                 np.logical_and(depth < np.inf, p > -3)
