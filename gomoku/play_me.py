@@ -12,7 +12,7 @@ CHANNELS = 4
 # good luck!
 if __name__ == "__main__":
     mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=CHANNELS)
-    mind.load_net('trained_models/9_8_14_18')
+    mind.load_net('trained_models/9_4_4')
 
     def expanding_p(depth, p):
         return np.logical_or.reduce([
