@@ -16,8 +16,8 @@ if __name__ == "__main__":
 
     def expanding_p(depth, p):
         return np.logical_or.reduce([
-            np.logical_and(depth < 2, p > -6),
-            np.logical_and(depth < 4, p > -5),
+            np.logical_and(depth < 2, p > -5),
+            np.logical_and(depth < 4, p > -4),
             np.logical_and(depth < 6, p > -4),
             np.logical_and(depth < np.inf, p > -3)
         ])
