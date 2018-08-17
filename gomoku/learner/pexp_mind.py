@@ -86,12 +86,12 @@ class PExpMind:
                                kernel_initializer='random_normal', use_bias=False)(bn2)
         bn3 = BatchNormalization()(conv_2)
         conv_3 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
-                               kernel_initializer='random_normal', use_bias=False)(bn2)
+                               kernel_initializer='random_normal', use_bias=False)(bn3)
         bn4 = BatchNormalization()(conv_3)
 
         flat = Flatten()(bn4)
 
-        hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        hidden = Dense(20, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
         bn_final = BatchNormalization()(hidden)
 
         out = Dense(1, use_bias=False)(bn_final)
@@ -134,7 +134,7 @@ class PExpMind:
     def policy_model_9(self):
         inp = Input(shape=(self.size, self.size, self.channels))
 
-        # key difference between this and conv network is padding
+        # key difference between this and value network
         conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
                                kernel_initializer='random_normal', use_bias=False)(inp)
         bn2 = BatchNormalization()(conv_1)
