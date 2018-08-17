@@ -28,10 +28,10 @@ BATCH_SIZE = 100
 GAME_BATCH = 500
 
 VECTORS_NPZ = 'gomoku/models/waiting_vectors.npz'
-VECTORS_COMPLETE = 'gomoku/models/waiting_vectors_complete'
+VECTORS_COMPLETE = 'gomoku/models/waiting_vectors_complete_2'
 P_MODEL = "gomoku/models/waiting_p.model"
 Q_MODEL = "gomoku/models/waiting_q.model"
-MODEL_COMPLETE = 'gomoku/models/waiting_models_complete'
+MODEL_COMPLETE = 'gomoku/models/waiting_models_complete_2'
 
 PATIENCE = 3
 
@@ -106,5 +106,8 @@ while True:
     print("Simulations Complete")
     npz = np.load(VECTORS_NPZ)
     train_model(npz)
-    os.remove(VECTORS_COMPLETE)
+    try:
+        os.remove(VECTORS_COMPLETE)
+    except:
+        pass
 
