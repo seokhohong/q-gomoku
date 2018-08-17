@@ -17,7 +17,7 @@ def run():
     rs = RandomState(42)
 
     for i in range(50):
-        board = Board(size=SIZE, win_chain_length=5)
+        board = Board(size=SIZE, win_chain_length=5, draw_point=50)
 
         print('Game', i)
 
@@ -94,7 +94,9 @@ def run():
         while True:
             result = mind.make_move(board,
                                     as_player=current_player,
-                                    epsilon=0.1, verbose=True)
+                                    epsilon=0.1,
+                                    consistency_check=False,
+                                    verbose=True)
             print(board.pprint())
             if current_player == Board.FIRST_PLAYER:
                 current_player = Board.SECOND_PLAYER

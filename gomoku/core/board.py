@@ -29,7 +29,7 @@ class Board:
     SECOND_PLAYER = 2
     TURN_INFO_INDEX = 3
 
-    def __init__(self, size=5, win_chain_length=3):
+    def __init__(self, size=5, win_chain_length=3, draw_point=None):
         self._size = size
 
         # three for No Player, Player 1, Player 2, one for turn index
@@ -52,6 +52,9 @@ class Board:
         self._cache_rotations()
 
         self._num_moves = 0
+
+        # number of plays at which it's a draw
+        self.draw_point = draw_point if draw_point else self._size ** 2
 
     def unmove(self):
         previous_move = self._ops.pop()
@@ -190,7 +193,7 @@ class Board:
 
     # probably drawn, cheap check
     def game_drawn(self):
-        return len(self._ops) == self._size ** 2
+        return len(self._ops) == self.draw_point
 
     def game_over(self):
         return self._game_state != GameState.NOT_OVER

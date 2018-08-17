@@ -173,6 +173,10 @@ class PExpNode:
     def depth(self):
         return len(self.full_move_list.moves)
 
+    # returns if this node is better than another, comparing Q value
+    def better_q(self, other):
+        return self.move_goodness > other.move_goodness
+
     # Computes a bottom-up recomputation of Q
     def recalculate_q(self):
         # if this node is still a leaf, break
@@ -194,8 +198,8 @@ class PExpNode:
         for parent in self.parents:
             # if this node is in the PV line
             if parent.best_child == self or parent.best_child is None or (
-                    (parent.is_maximizing and self.q > parent.best_child.q) or
-                    (not parent.is_maximizing and self.q < parent.best_child.q)
+                    (parent.is_maximizing and self.better_q(parent.best_child)) or
+                    (not parent.is_maximizing and not self.better_q(parent.best_child))
             ):
                 parent.recalculate_q()
 
@@ -310,7 +314,7 @@ class PExpNode:
         valid_children = [tup for tup in self.children.items() if tup[1].assigned_q]
         if len(valid_children) == 0:
             return []
-        best_move, best_child = max(valid_children, key=lambda x: sign * x[0])
+        best_move, best_child = max(valid_children, key=lambda x: sign * x[1].move_goodness)
         return [str(best_move)] + best_child.real_principal_variation()
 
 

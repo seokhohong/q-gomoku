@@ -542,7 +542,7 @@ class PExpMind:
 
     # with epsilon probability will select random move
     # returns whether game has concluded or not
-    def make_move(self, board, as_player, verbose=True, epsilon=0.1, save_root=False):
+    def make_move(self, board, as_player, verbose=True, epsilon=0.1, save_root=False, consistency_check=False):
         current_q = self.q(board)
         assert(as_player == board.get_player_to_move())
 
@@ -551,7 +551,9 @@ class PExpMind:
 
         # array of [best_move, best_node], root node of move calculations
         is_maximizing = True if board.get_player_to_move() == Board.FIRST_PLAYER else False
-        possible_moves, root_node = self.p_search(board, is_maximizing, root_node=starting_root,
+        possible_moves, root_node = self.p_search(board, is_maximizing,
+                                                  root_node=starting_root,
+                                                  consistency_check=consistency_check,
                                                   save_root=save_root, verbose=verbose)
 
         # best action is 0th index
