@@ -318,7 +318,7 @@ class PExpMind:
             # remove duplicates
             principal_variations = set(principal_variations)
 
-            print('Root', root_node.principal_variation)
+            print('Root', str(root_node))
 
         q_stats, p_stats = root_node.recursive_stats()
         print('Explored ' + str(p_stats) + " States (Q evals: " + str(q_stats) + ") in " + str(i) + " Iterations")
@@ -327,7 +327,7 @@ class PExpMind:
 
         for move, q in possible_moves:
             node = root_node.children[move]
-            print('Move', move, str(node.principal_variation))
+            print('Move', move, str(node))
 
         if save_root:
             self.pickle_root(board, root_node)

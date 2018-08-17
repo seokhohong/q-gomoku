@@ -304,6 +304,16 @@ class PExpNode:
 
         return value, best_child
 
+    # does formal expansion rather than a move list check
+    def real_principal_variation(self):
+        sign = 1 if self.is_maximizing else -1
+        valid_children = [tup for tup in self.children.items() if tup[1].assigned_q]
+        if len(valid_children) == 0:
+            return []
+        best_move, best_child = max(valid_children, key=lambda x: sign * x[0])
+        return [str(best_move)] + best_child.real_principal_variation()
+
+
     @classmethod
     # whether the q is from a game result (as opposed to an approximation of game state)
     def is_result_q(cls, q, epsilon=1E-7):
@@ -311,6 +321,6 @@ class PExpNode:
 
     def __str__(self):
         if self.principal_variation:
-            return ("PV: " + str(self.principal_variation.full_move_list.moves) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.log_total_p)
+            return ("PV: " + ', '.join(self.real_principal_variation()) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.principal_variation.log_total_p)
         else:
             return "Position: " + str(self.full_move_list.moves) + " P: {0:.4f}".format(self.log_total_p)
