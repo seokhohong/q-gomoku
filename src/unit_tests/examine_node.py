@@ -1,5 +1,5 @@
 import pickle
-from gomoku.core.board import Board
+
 
 class DisplayForm:
     def __init__(self, root_node):
@@ -62,6 +62,7 @@ class DisplayForm:
             self.open_pv(best_child)
 
 def reconstruction(matrix):
+    from ..core.board import Board
     instructions = ""
     xs = []
     ys = []

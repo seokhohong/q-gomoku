@@ -594,7 +594,7 @@ class PExpMind:
         import sys
         sys.setrecursionlimit(100000)
         saving_hash = str(hash(tuple(board.get_matrix().reshape(-1))))
-        with open('gomoku/logs/' + saving_hash + '.pkl', 'wb') as f:
+        with open('src/logs/' + saving_hash + '.pkl', 'wb') as f:
             root_node.set_matrix(board.get_matrix())
             pickle.dump(root_node, f)
             print('Root saved at ', saving_hash)

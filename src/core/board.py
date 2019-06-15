@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 import random
 
-from util import utils
+from ..util import utils
 
 class Move:
     def __init__(self, player, x, y):
@@ -23,7 +23,6 @@ class GameState:
 # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
 
 class Board:
-    _player_to_move: int
     NO_PLAYER = 0
     FIRST_PLAYER = 1
     SECOND_PLAYER = 2

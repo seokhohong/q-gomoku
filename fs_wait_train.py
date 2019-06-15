@@ -27,11 +27,11 @@ EPOCHS = 100
 BATCH_SIZE = 100
 GAME_BATCH = 500
 
-VECTORS_NPZ = 'gomoku/models/waiting_vectors.npz'
-VECTORS_COMPLETE = 'gomoku/models/waiting_vectors_complete_2'
-P_MODEL = "gomoku/models/waiting_p.model"
-Q_MODEL = "gomoku/models/waiting_q.model"
-MODEL_COMPLETE = 'gomoku/models/waiting_models_complete_2'
+VECTORS_NPZ = 'src/models/waiting_vectors.npz'
+VECTORS_COMPLETE = 'src/models/waiting_vectors_complete_2'
+P_MODEL = "src/models/waiting_p.model"
+Q_MODEL = "src/models/waiting_q.model"
+MODEL_COMPLETE = 'src/models/waiting_models_complete_2'
 
 PATIENCE = 3
 
