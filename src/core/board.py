@@ -3,7 +3,7 @@ from collections import defaultdict
 import numpy as np
 import random
 
-from ..util import utils
+from src.util import utils
 
 class Move:
     def __init__(self, player, x, y):
@@ -23,6 +23,7 @@ class GameState:
 # Q will always be from the perspective of Player 1 (Player 1 Wins = Q = 1, Player -1 Wins, Q = -1)
 
 class Board:
+    # channels
     NO_PLAYER = 0
     FIRST_PLAYER = 1
     SECOND_PLAYER = 2
@@ -34,7 +35,7 @@ class Board:
         # three for No Player, Player 1, Player 2, one for turn index
         self._matrix = np.zeros((self._size, self._size, 4), dtype=np.int)
 
-        # tracks which player played which spot (optimization
+        # tracks which player played which spot (optimization)
         self._which_stone = np.zeros((self._size, self._size), dtype=np.int)
 
         self._win_chain_length = win_chain_length
@@ -54,6 +55,17 @@ class Board:
 
         # number of plays at which it's a draw
         self.draw_point = draw_point if draw_point else self._size ** 2
+
+    # for testing purposes
+    def set_to_one_move_from_win(self):
+        self.move(0, 0)
+        self.move(0, 1)
+        self.move(1, 0)
+        self.move(1, 1)
+        self.move(2, 0)
+        self.move(2, 1)
+        self.move(3, 0)
+        self.move(3, 1)
 
     def unmove(self):
         previous_move = self._ops.pop()
@@ -148,10 +160,13 @@ class Board:
         self.move(move_x, move_y)
 
     def _flip_player_to_move(self):
-        if self._player_to_move == Board.FIRST_PLAYER:
-            self._player_to_move = Board.SECOND_PLAYER
+        self._player_to_move = self._get_other_player(self._player_to_move)
+
+    def _get_other_player(self, player):
+        if player == Board.FIRST_PLAYER:
+            return Board.SECOND_PLAYER
         else:
-            self._player_to_move = Board.FIRST_PLAYER
+            return Board.FIRST_PLAYER
 
     # returns None if game has not concluded, True if the last move won the game, False if draw
     # frequently called function, needs to be optimized
@@ -191,23 +206,65 @@ class Board:
         return self._game_state == GameState.WON
 
     # probably drawn, cheap check
-    def game_drawn(self):
+    def game_assume_drawn(self):
         return len(self._ops) == self.draw_point
 
     def game_over(self):
         return self._game_state != GameState.NOT_OVER
 
-    def pprint(self):
+    def get_winning_player(self):
+        if self.game_over():
+            return self._get_other_player(self._player_to_move)
+        return Board.NO_PLAYER
+
+    EXPORT_DELIM = '.'
+    # simplest matrix representation of the board state
+    def export_string(self):
+        flatmatrix = np.zeros((self._size, self._size))
+        for x in range(self._size):
+            for y in range(self._size):
+                if self._matrix[x, y, Board.FIRST_PLAYER] == 1:
+                    flatmatrix[x, y] = Board.FIRST_PLAYER
+                elif self._matrix[x, y, Board.SECOND_PLAYER] == 1:
+                    flatmatrix[x, y] = Board.SECOND_PLAYER
+        return Board.EXPORT_DELIM.join([str(self._size),
+                                        ''.join([str(elem) for elem in flatmatrix.astype(np.int32).reshape(-1)]),
+                                        str(self._player_to_move)])
+
+    # takes a board string and recreates a game state from it (quite slow)
+    @classmethod
+    def parse_string(Board, string):
+        size, boardstring, player_to_move = string.split(Board.EXPORT_DELIM)
+        size = int(size)
+        board = Board(size=size)
+        player_1_moves = []
+        player_2_moves = []
+        reshaped_board = np.array([int(elem) for elem in boardstring]).reshape((size, size))
+        for i in range(size):
+            for j in range(size):
+                if reshaped_board[i][j] == Board.FIRST_PLAYER:
+                    player_1_moves.append((i, j))
+                elif reshaped_board[i][j] == Board.SECOND_PLAYER:
+                    player_2_moves.append((i, j))
+
+        for i in range(len(player_1_moves)):
+            board.blind_move(*player_1_moves[i])
+            if i < len(player_2_moves):
+                board.blind_move(*player_2_moves[i])
+
+        return board
+
+    def pprint(self, lastmove_highlight=True):
         def display_char(x, y):
             move = utils.peek_stack(self._ops)
             if move:
                 was_last_move = (x == move.x and y == move.y)
                 if self._matrix[x, y, Board.FIRST_PLAYER] == 1:
-                    if was_last_move:
+                    if was_last_move and lastmove_highlight:
                         return 'X'
                     return 'x'
                 elif self._matrix[x, y, Board.SECOND_PLAYER] == 1:
-                    if was_last_move:
+                    if was_last_move and lastmove_highlight:
                         return 'O'
                     return 'o'
             return ' '

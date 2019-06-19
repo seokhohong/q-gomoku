@@ -1,7 +1,7 @@
 
-from learner import pexp_mind
-from core.board import Board
-from core.minimax import PExpNode
+from src.learner import pexp_mind
+from src.core.board import Board
+from src.core.minimax import PExpNode
 import numpy as np
 
 import random
@@ -9,10 +9,14 @@ import random
 SIZE = 9
 CHANNELS = 4
 
+import os
+# bug with python on macos
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
+
 # good luck!
 if __name__ == "__main__":
     mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=CHANNELS)
-    mind.load_net('trained_models/9_4_4')
+    mind.load_net('../trained_models/9_4_4')
 
     def expanding_p(depth, p):
         return np.logical_or.reduce([

@@ -2,45 +2,13 @@ import numpy as np
 
 from src.core.board import GameState
 
-class MoveList:
-    # moves should be a tuple
-    def __init__(self, moves, position_hash):
-        self.moves = moves
-        self.list_hash = position_hash
-
-    # hashes are unique to board positions, allowing variation in the order of created moves
-    def append(self, new_move):
-        new_hash_elem = (-1) ** (len(self.moves) % 2) * (new_move[0] * 100 + new_move[1])
-        new_list_hash = list(self.list_hash)
-        new_list_hash.append(new_hash_elem)
-        return MoveList((self.moves + (new_move, )), sorted(new_list_hash))
-
-    def __eq__(self, other):
-        return self.moves == other.moves
-
-    def __hash__(self):
-        return hash(self.moves)
-
-    def __len__(self):
-        return len(self.moves)
-    # incomplete
-    def cleanse(self, moves):
-        move_list = list(self.moves)
-        for move in moves:
-            move_list.remove(move)
-            self.list_hash.remove(move)
-        self.moves = move_list
-
-    def transposition_hash(self):
-        return tuple(self.list_hash)
-
 # search tree where we search strictly according to the likelihood function
-class PExpNode:
-    MAX_Q = 1
+class PExpNode_v11:
+    MAX_Q = 1.1
     # largest Q allowed by model prediction (MAX_Q is a minimax certified win)
-    MAX_MODEL_Q = 0.99
-    MIN_Q = -1
-    MIN_MODEL_Q = -0.99
+    MAX_MODEL_Q = 1.0
+    MIN_Q = -MAX_Q
+    MIN_MODEL_Q = -MAX_MODEL_Q
     UNASSIGNED_Q = None
 
     def __init__(self, parent, is_maximizing, full_move_list):
@@ -65,8 +33,7 @@ class PExpNode:
         self.best_child = None
 
         self.principal_variation = None
-        self.q = PExpNode.UNASSIGNED_Q
-        self.assigned_q = False
+        self.q = PExpNode_v11.UNASSIGNED_Q
 
         # log likelihood of playing this move given root board state (used for PVS search)
         self.log_total_p = 0

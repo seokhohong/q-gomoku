@@ -1,10 +1,9 @@
-from learner import pexp_mind
-from core.board import Board
+from src.learner import pexp_mind
+from src.core.board import Board
 
 from numpy.random import RandomState
 import numpy as np
 
-import cProfile
 
 minds = []
 
