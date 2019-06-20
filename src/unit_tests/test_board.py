@@ -1,5 +1,5 @@
 
-from src.core.board import Board
+from src.core.board import Board, Rotator
 import unittest
 
 class TestStringMethods(unittest.TestCase):
@@ -8,6 +8,7 @@ class TestStringMethods(unittest.TestCase):
         board.move(0, 0)
         assert (board.get_matrix()[0, 0, 0] == 0)
         self.assertFalse(board.is_move_available(0, 0))
+        self.assertTrue(board.get_spot(0, 0) == Board.FIRST_PLAYER)
         board.move(0, 1)
         board.move(1, 1)
         assert (board.chain_length(1, 1, -1, 0) == 1)
@@ -29,6 +30,10 @@ class TestStringMethods(unittest.TestCase):
         for i in range(10):
             board.make_random_move()
             self.assertEqual(board.pprint(lastmove_highlight=False), Board.parse_string(board.export_string()).pprint(lastmove_highlight=False))
+
+    def test_rotator(self):
+        rot = Rotator(size=9)
+        self.assertEqual(rot.get_rotated_points(1), 9)
 
 if __name__ == '__main__':
     unittest.main()

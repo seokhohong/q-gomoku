@@ -17,6 +17,51 @@ class GameState:
     DRAW = 2
     NOT_OVER = 3
 
+class Rotator:
+    def __init__(self, size):
+        self._size = size
+        self._cached_point_rotations = defaultdict(list)
+        self._cache_rotations()
+
+    # Returns rotations and mirrors of the board state
+    # This is important for teaching the convolution layers about rotational invariance
+    def get_rotated_matrices(self, matrix):
+        transposition_axes = (1, 0, 2)
+        assert matrix.shape[0] == self._size
+        return [
+            matrix,
+            np.transpose(matrix, axes=transposition_axes),
+            np.rot90(matrix),
+            np.transpose(np.rot90(matrix), axes=transposition_axes),
+            np.rot90(matrix, 2),
+            np.transpose(np.rot90(matrix, 2), axes=transposition_axes),
+            np.rot90(matrix, 3),
+            np.transpose(np.rot90(matrix, 3), axes=transposition_axes)
+        ]
+
+    def get_rotated_points(self, point):
+        return self._cached_point_rotations[point]
+
+    # Precomputes some useful rotation values
+    def _cache_rotations(self):
+        indices = np.array(range(self._size ** 2)).reshape(self._size, self._size)
+        for matrix in [
+                indices,
+                indices.transpose(),
+                np.rot90(indices),
+                np.rot90(indices).transpose(),
+                np.rot90(indices, 2),
+                np.rot90(indices, 2).transpose(),
+                np.rot90(indices, 3),
+                np.rot90(indices, 3).transpose()
+            ]:
+            for x in range(self._size):
+                for y in range(self._size):
+                    self._cached_point_rotations[indices[x, y]].append(matrix[x, y])
+
+
+
+
 # Board class represents the state of the game
 
 # board perception will always be from the perspective of Player 1
@@ -47,9 +92,6 @@ class Board:
         for i in range(self._size):
             for j in range(self._size):
                 self._available_moves.add((i, j))
-
-        self._cached_point_rotations = defaultdict(list)
-        self._cache_rotations()
 
         self._num_moves = 0
 
@@ -87,50 +129,17 @@ class Board:
             self._matrix[:, :, Board.TURN_INFO_INDEX].fill(-1)
         return np.copy(self._matrix)
 
+    def get_spot(self, x, y):
+        return self._which_stone[x, y]
+
     def get_player_to_move(self):
         return self._player_to_move
 
     def get_size(self):
         return self._size
 
-    # Returns rotations and mirrors of the board state
-    # This is important for teaching the convolution layers about rotational invariance
-    def get_rotated_matrices(self):
-        transposition_axes = (1, 0, 2)
-        matrix = self.get_matrix()
-        return [
-            matrix,
-            np.transpose(matrix, axes=transposition_axes),
-            np.rot90(matrix),
-            np.transpose(np.rot90(matrix), axes=transposition_axes),
-            np.rot90(matrix, 2),
-            np.transpose(np.rot90(matrix, 2), axes=transposition_axes),
-            np.rot90(matrix, 3),
-            np.transpose(np.rot90(matrix, 3), axes=transposition_axes)
-        ]
-
-    # Precomputes some useful rotation values
-    def _cache_rotations(self):
-        indices = np.array(range(self._size ** 2)).reshape(self._size, self._size)
-        for matrix in [
-                indices,
-                indices.transpose(),
-                np.rot90(indices),
-                np.rot90(indices).transpose(),
-                np.rot90(indices, 2),
-                np.rot90(indices, 2).transpose(),
-                np.rot90(indices, 3),
-                np.rot90(indices, 3).transpose()
-            ]:
-            for x in range(self._size):
-                for y in range(self._size):
-                    self._cached_point_rotations[matrix[x, y]].append(indices[x, y])
-
     def coordinate_to_index(self, x, y):
         return x * self._size + y
-
-    def get_rotated_point(self, index):
-        return self._cached_point_rotations[index]
 
     # Places a stone at x, y for the next player's turn
     # Does not compute whether the game has completed or not (performance optimization)

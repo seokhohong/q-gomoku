@@ -5,14 +5,17 @@ from src.core.game_record import GameRecord
 
 # a match between two ai's
 class Match:
-    def __init__(self, mind1, mind2, size=9, random_seed=42, opening_moves=10, draw_point=50):
+    def __init__(self, mind1, mind2, size=9, random_seed=42, opening_moves=10, draw_point=50, trivialize=False):
         self.board = Board(size=size, win_chain_length=5, draw_point=draw_point)
 
         random_state = np.random.RandomState(random_seed)
 
-        # randomize the board a bit
-        for j in range(random_state.randint(0, opening_moves)):
-            self.board.make_random_move()
+        if not trivialize:
+            # randomize the board a bit
+            for j in range(random_state.randint(0, opening_moves)):
+                self.board.make_random_move()
+        else:
+            self.board.set_to_one_move_from_win()
 
         self.players = {Board.FIRST_PLAYER: mind1, Board.SECOND_PLAYER: mind2}
         self.game_record = GameRecord.create(self.board)
