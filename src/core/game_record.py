@@ -24,7 +24,7 @@ class GameRecord:
         return GameRecord(obj_dict['initial_state'],
                           obj_dict['moves'],
                           obj_dict['winning_player'],
-                          obj_dict['curr_q_assessments'])
+                          obj_dict['q_assessments'])
 
     class PrettyFloat(float):
         def __repr__(self):
@@ -49,3 +49,14 @@ class GameRecord:
         }
         return json.dumps(obj_dict)
 
+    def get_initial_state(self):
+        return self.initial_state
+
+    def get_moves(self):
+        return self.moves
+
+    def get_winning_player(self):
+        return self._winning_player
+
+    def get_q_assessments(self):
+        return self.q_assessments

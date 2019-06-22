@@ -84,7 +84,7 @@ if __name__ == "__main__":
             board.move(*best_move)
             print(board.guide_print())
 
-        if board.game_drawn():
+        if board.game_approx_drawn():
             print("DRAW!")
             break
 

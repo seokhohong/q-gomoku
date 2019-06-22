@@ -1,8 +1,9 @@
 *.net
 *.npz
-.idea*
+*.idea*
 gomoku/models/*
 gomoku/logs/*
+*.zip
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -2,6 +2,7 @@ from collections import defaultdict
 
 import numpy as np
 import random
+import json
 
 from src.util import utils
 
@@ -17,6 +18,46 @@ class GameState:
     DRAW = 2
     NOT_OVER = 3
 
+class BoardTransform:
+    def __init__(self, size):
+        self._size = size
+        self._cached_point_rotations = defaultdict(list)
+        self._cache_rotations()
+
+    # Returns rotations and mirrors of the board state
+    # This is important for teaching the convolution layers about rotational invariance
+    def get_rotated_matrices(self, matrix):
+        transposition_axes = (1, 0, 2)
+        assert matrix.shape[0] == self._size
+        return [
+            matrix,
+            np.transpose(matrix, axes=transposition_axes),
+            np.rot90(matrix),
+            np.transpose(np.rot90(matrix), axes=transposition_axes),
+            np.rot90(matrix, 2),
+            np.transpose(np.rot90(matrix, 2), axes=transposition_axes),
+            np.rot90(matrix, 3),
+            np.transpose(np.rot90(matrix, 3), axes=transposition_axes)
+        ]
+
+    def get_rotated_points(self, point):
+        return self._cached_point_rotations[point]
+
+    # Precomputes some useful rotation values
+    def _cache_rotations(self):
+        indices = np.array(range(self._size ** 2)).reshape(self._size, self._size, 1)
+        for matrix in self.get_rotated_matrices(indices):
+            for x in range(self._size):
+                for y in range(self._size):
+                    self._cached_point_rotations[matrix[x, y, 0]].append(indices[x, y, 0])
+
+    def coordinate_to_index(self, x, y):
+        return x * self._size + y
+
+    def index_to_coordinate(self, index):
+        return int(index / self._size), int(index % self._size)
+
+
 # Board class represents the state of the game
 
 # board perception will always be from the perspective of Player 1
@@ -29,11 +70,17 @@ class Board:
     SECOND_PLAYER = 2
     TURN_INFO_INDEX = 3
 
-    def __init__(self, size=5, win_chain_length=3, draw_point=None):
+    STONE_PRESENT = 1
+    STONE_ABSENT = 0
+
+    def __init__(self, size=9, win_chain_length=5, draw_point=None):
         self._size = size
 
         # three for No Player, Player 1, Player 2, one for turn index
         self._matrix = np.zeros((self._size, self._size, 4), dtype=np.int)
+
+        # Stone present for no player... make sense?
+        self._matrix[:, :, Board.NO_PLAYER].fill(Board.STONE_PRESENT)
 
         # tracks which player played which spot (optimization)
         self._which_stone = np.zeros((self._size, self._size), dtype=np.int)
@@ -47,9 +94,6 @@ class Board:
         for i in range(self._size):
             for j in range(self._size):
                 self._available_moves.add((i, j))
-
-        self._cached_point_rotations = defaultdict(list)
-        self._cache_rotations()
 
         self._num_moves = 0
 
@@ -80,68 +124,31 @@ class Board:
 
         self._num_moves -= 1
 
-    def get_matrix(self):
-        if self._player_to_move == Board.FIRST_PLAYER:
-            self._matrix[:, :, Board.TURN_INFO_INDEX].fill(1)
-        else:
-            self._matrix[:, :, Board.TURN_INFO_INDEX].fill(-1)
-        return np.copy(self._matrix)
+    def get_spot(self, x, y):
+        return self._which_stone[x, y]
 
     def get_player_to_move(self):
         return self._player_to_move
 
+    def get_player_last_move(self):
+        return self._get_other_player(self.get_player_to_move())
+
+    def get_last_move(self):
+        return utils.peek_stack(self._ops)
+
     def get_size(self):
         return self._size
-
-    # Returns rotations and mirrors of the board state
-    # This is important for teaching the convolution layers about rotational invariance
-    def get_rotated_matrices(self):
-        transposition_axes = (1, 0, 2)
-        matrix = self.get_matrix()
-        return [
-            matrix,
-            np.transpose(matrix, axes=transposition_axes),
-            np.rot90(matrix),
-            np.transpose(np.rot90(matrix), axes=transposition_axes),
-            np.rot90(matrix, 2),
-            np.transpose(np.rot90(matrix, 2), axes=transposition_axes),
-            np.rot90(matrix, 3),
-            np.transpose(np.rot90(matrix, 3), axes=transposition_axes)
-        ]
-
-    # Precomputes some useful rotation values
-    def _cache_rotations(self):
-        indices = np.array(range(self._size ** 2)).reshape(self._size, self._size)
-        for matrix in [
-                indices,
-                indices.transpose(),
-                np.rot90(indices),
-                np.rot90(indices).transpose(),
-                np.rot90(indices, 2),
-                np.rot90(indices, 2).transpose(),
-                np.rot90(indices, 3),
-                np.rot90(indices, 3).transpose()
-            ]:
-            for x in range(self._size):
-                for y in range(self._size):
-                    self._cached_point_rotations[matrix[x, y]].append(indices[x, y])
-
-    def coordinate_to_index(self, x, y):
-        return x * self._size + y
-
-    def get_rotated_point(self, index):
-        return self._cached_point_rotations[index]
 
     # Places a stone at x, y for the next player's turn
     # Does not compute whether the game has completed or not (performance optimization)
     def blind_move(self, x, y):
-        assert(self._game_state is GameState.NOT_OVER)
+        assert self._game_state is GameState.NOT_OVER
         self._ops.append(Move(self._player_to_move, x, y))
 
-        self._matrix[x, y, self._player_to_move] = 1
-        self._which_stone[x, y] = self._player_to_move
+        self._matrix[x, y, self._player_to_move] = Board.STONE_PRESENT
+        self._matrix[x, y, Board.NO_PLAYER] = Board.STONE_ABSENT
 
-        self._matrix[x, y, Board.NO_PLAYER] = 0
+        self._which_stone[x, y] = self._player_to_move
 
         self._available_moves.remove((x, y))
         self._flip_player_to_move()
@@ -217,7 +224,6 @@ class Board:
             return self._get_other_player(self._player_to_move)
         return Board.NO_PLAYER
 
-    EXPORT_DELIM = '.'
     # simplest matrix representation of the board state
     def export_string(self):
         flatmatrix = np.zeros((self._size, self._size))
@@ -227,16 +233,15 @@ class Board:
                     flatmatrix[x, y] = Board.FIRST_PLAYER
                 elif self._matrix[x, y, Board.SECOND_PLAYER] == 1:
                     flatmatrix[x, y] = Board.SECOND_PLAYER
-        return Board.EXPORT_DELIM.join([str(self._size),
-                                        ''.join([str(elem) for elem in flatmatrix.astype(np.int32).reshape(-1)]),
-                                        str(self._player_to_move)])
+        return json.dumps({'size': str(self._size),
+                           'win_chain_length': str(self._win_chain_length),
+                            'boardstring': ''.join([str(elem) for elem in flatmatrix.astype(np.int32).reshape(-1)]),
+                            'player_to_move': str(self._player_to_move)})
 
     # takes a board string and recreates a game state from it (quite slow)
     @classmethod
-    def parse_string(Board, string):
-        size, boardstring, player_to_move = string.split(Board.EXPORT_DELIM)
-        size = int(size)
-        board = Board(size=size)
+    def create_board_from_specs(Board, size, win_chain_length, boardstring):
+        board = Board(size=size, win_chain_length=win_chain_length)
         player_1_moves = []
         player_2_moves = []
         reshaped_board = np.array([int(elem) for elem in boardstring]).reshape((size, size))
@@ -253,6 +258,13 @@ class Board:
                 board.blind_move(*player_2_moves[i])
 
         return board
+
+    @classmethod
+    def parse_string(Board, string):
+        item_dict = json.loads(string)
+        return Board.create_board_from_specs(int(item_dict['size']),
+                                             int(item_dict['win_chain_length']),
+                                             item_dict['boardstring'])
 
     def pprint(self, lastmove_highlight=True):
         def display_char(x, y):

@@ -3,19 +3,21 @@ import pickle
 import keras
 import numpy as np
 from src.core.board import Board, GameState
-from src.core.minimax import PExpNode
+from src.learner.pexp_node_v1_1 import PExpNode_v1_1
 from src.core import minimax
 from keras import losses
 from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalization
 from keras.models import Model  # basic class for specifying and training a neural network
 from sortedcontainers import SortedList
 
+from src.learner.game_to_features import FeatureSet_v1_1
 
-class PExpMind:
-    def __init__(self, size, channels=1, init=True):
+class PExpMind_v1_1:
+    def __init__(self, size, init=True):
 
+        self.feature_system = FeatureSet_v1_1
         self.size = size
-        self.channels = channels
+        self.channels = FeatureSet_v1_1.CHANNELS
 
         assert size == 9
         self.value_est = self.value_model_9()
@@ -124,7 +126,7 @@ class PExpMind:
             self.max_iterations = max_iterations
 
         def init(self):
-            self.root_node = PExpNode(parent=None,
+            self.root_node = PExpNode_v1_1(parent=None,
                                       is_maximizing=self.is_maximizing,
                                       full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
@@ -139,7 +141,7 @@ class PExpMind:
     def p_search(self, board, is_maximizing, root_node=None, save_root=True, consistency_check=False, verbose=True):
 
         if root_node is None:
-            root_node = PExpNode(parent=None,
+            root_node = PExpNode_v1_1(parent=None,
                                                 is_maximizing=is_maximizing,
                                                 full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
@@ -164,17 +166,18 @@ class PExpMind:
 
             # the ways P search terminates
             if i > self.max_iters:
+                break
                 # break if there's some hanging issue
-                if i > self.max_iters * 5:
-                    break
+                #if i > self.max_iters * 5:
+                #    break
 
                 # same child has been best child for awhile now
-                if len(set(best_children[-self._move_convergence_count:])) == 1\
-                        and len(root_node.principal_variation.full_move_list) > self.required_depth:
-                    break
+                #if len(set(best_children[-self._move_convergence_count:])) == 1\
+                #        and len(root_node.principal_variation.full_move_list) > self.required_depth:
+                #    break
 
-                if root_node.principal_variation.game_status == GameState.DRAW:
-                    break
+                #if root_node.principal_variation.game_status == GameState.DRAW:
+                #    break
 
             # searching doesn't get us anywhere for awhile
             if root_node.principal_variation and root_node.principal_variation.q:
@@ -242,7 +245,7 @@ class PExpMind:
 
     def highest_leaf_qs(self, leaf_nodes, is_maximizing, max_p_eval=100, num_leaves=10):
         num_eval = min(max_p_eval, len(leaf_nodes))
-        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.assigned_q and leaf.game_status == GameState.NOT_OVER]
+        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.assigned_q() and leaf.game_status == GameState.NOT_OVER]
         best_leaves = sorted(valid_leaves, key=lambda x: abs(x.q), reverse=True)
         return best_leaves[:num_leaves]
 
@@ -255,7 +258,7 @@ class PExpMind:
             assert(leaf.game_status == GameState.NOT_OVER)
             assert(not leaf.has_children())
             parents_to_update.update(leaf.parents)
-            board_matrices.append(leaf.get_matrix())
+            board_matrices.append(self.feature_system.make_feature_tensors(leaf, ))
 
         # if nothing to eval, get out
         if len(board_matrices) == 0:
@@ -264,8 +267,8 @@ class PExpMind:
         # attach q predictions to all leaves and compute q tree at once
         q_predictions = np.clip(
                     self.value_est.predict(np.array(board_matrices), batch_size=1000).reshape(len(board_matrices)),
-                    a_max=PExpNode.MAX_MODEL_Q,
-                    a_min=PExpNode.MIN_MODEL_Q
+                    a_max=PExpNode_v1_1.MAX_MODEL_Q,
+                    a_min=PExpNode_v1_1.MIN_MODEL_Q
             )
 
         for i, leaf in enumerate(nodes):
@@ -287,13 +290,13 @@ class PExpMind:
         p_search_vectors = []
         for parent in nodes_to_expand:
             # for each move except the last, make rapid moves on board
-            if parent.has_matrix():
-                p_search_vectors.append(parent.get_matrix())
+            if parent.has_p_features():
+                p_search_vectors.append(parent.get_p_features())
             else:
                 for move in parent.full_move_list.moves:
                     board.blind_move(*move)
 
-                p_search_vectors.append(board.get_matrix())
+                p_search_vectors.append(self.feature_system.make_p_features(board, board.get_last_move))
 
                 for _ in parent.full_move_list.moves:
                     board.unmove()
@@ -335,8 +338,7 @@ class PExpMind:
         p_search_vectors = self.get_board_vectors(board, nodes_to_expand)
         p_search_nodes = list(nodes_to_expand)
 
-        p_board_vectors = np.array(p_search_vectors).reshape(len(p_search_vectors), self.size, self.size,
-                                                             self.channels)
+        p_board_vectors = np.array(p_search_vectors).reshape((len(p_search_vectors), self.size, self.size, self.channels))
 
         log_p_predictions = np.log(self.policy_est.predict([p_board_vectors], batch_size=len(p_board_vectors))).reshape(-1)
 
@@ -391,26 +393,27 @@ class PExpMind:
                     child.assign_p(log_p_prediction)
                     # if game is over, then we have our q
                     if board.game_won():
-                        winning_q = PExpNode.MIN_Q if board.get_player_to_move() == Board.FIRST_PLAYER else PExpNode.MAX_Q
+                        winning_q = PExpNode_v1_1.MIN_Q if board.get_player_to_move() == Board.FIRST_PLAYER else PExpNode_v1_1.MAX_Q
                         child.assign_q(winning_q, GameState.WON)
                         q_update.add(parent)
 
-                    elif board.game_drawn():
+                    elif board.game_assume_drawn():
                         child.assign_q(0, GameState.DRAW)
                         q_update.add(parent)
 
                     else:
                         new_leaves.append(child)
-                        child.set_matrix(board.get_matrix())
+                        child.set_p_features(self.feature_system.make_p_features(board, board.get_last_move()))
 
                     # unmove for child
                     board.unmove()
                 else:
-                    PExpMind.accessed_transposition += 1
+                    PExpMind_v1_1.accessed_transposition += 1
                     q_update.add(parent)
 
     def q(self, board):
-        return self.value_est.predict([np.array([board.get_matrix().reshape(self.size, self.size, -1)])])[0][0]
+        q_features = self.feature_system.make_q_features(board, board.get_last_move())
+        return self.value_est.predict([np.array([q_features])])[0][0]
 
     def pick_random_move(self, board, possible_moves):
         picked_action = 0
@@ -455,7 +458,7 @@ class PExpMind:
         assert(as_player == board.get_player_to_move())
 
         # incomplete
-        starting_root = self.cleanse_memory_tree(self.memory_root, None, None)
+        #starting_root = self.cleanse_memory_tree(self.memory_root, None, None)
 
         # array of [best_move, best_node], root node of move calculations
         is_maximizing = True if board.get_player_to_move() == Board.FIRST_PLAYER else False
@@ -481,21 +484,9 @@ class PExpMind:
         best_move, best_node = possible_moves[0]
         best_q = best_node.q
 
-        # q update with learning rate self.alpha
-        new_best_q = (1 - self.alpha) * current_q + self.alpha * best_q
-
-        # compress to model valid range
-        new_best_q = max(min(new_best_q, PExpNode.MAX_MODEL_Q), PExpNode.MIN_MODEL_Q)
-
         print(current_q, best_q)
-        self.add_train_example(board, new_best_q, best_move)
 
-        # picked move may not equal best move if we're making a suboptimal one
-        board.move(*picked_move)
-
-        self.memory_root = root_node.children[picked_move[0], picked_move[1]]
-
-        return board.game_over()
+        return best_move, current_q, best_q
 
     def pickle_root(self, board, root_node):
         # save for debugging
@@ -517,17 +508,6 @@ class PExpMind:
 
     def index_to_move(self, index):
         return np.int(index / self.size), np.int(index % self.size)
-
-    # adds rotations
-    def add_train_example(self, board, result, move):
-        board_vectors = board.get_rotated_matrices()
-
-        for i, vector in enumerate(board_vectors):
-            self.train_vectors.append(vector)
-            self.train_q.append(result)
-            # get the i'th rotation
-            which_rotation = board.get_rotated_point(self.move_to_index(move))[i]
-            self.train_p.append(self.one_hot_p(which_rotation))
 
 
     def save(self, filename):

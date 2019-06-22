@@ -3,10 +3,10 @@ import numpy as np
 from src.core.board import GameState
 
 # search tree where we search strictly according to the likelihood function
-class PExpNode_v11:
-    MAX_Q = 1.1
+class PExpNode_v1_1:
+    MAX_Q = 1.0
     # largest Q allowed by model prediction (MAX_Q is a minimax certified win)
-    MAX_MODEL_Q = 1.0
+    MAX_MODEL_Q = 1.0 - 1E-4
     MIN_Q = -MAX_Q
     MIN_MODEL_Q = -MAX_MODEL_Q
     UNASSIGNED_Q = None
@@ -33,7 +33,7 @@ class PExpNode_v11:
         self.best_child = None
 
         self.principal_variation = None
-        self.q = PExpNode_v11.UNASSIGNED_Q
+        self.q = PExpNode_v1_1.UNASSIGNED_Q
 
         # log likelihood of playing this move given root board state (used for PVS search)
         self.log_total_p = 0
@@ -46,23 +46,33 @@ class PExpNode_v11:
         # the quality of this move
         self.move_goodness = 0
 
-        self._matrix = None
+        self._p_features = None
+        self._q_features = None
 
-    def set_matrix(self, matrix):
-        self._matrix = matrix
+    def set_q_features(self, q_features):
+        self._q_features = q_features
 
-    def get_matrix(self):
-        return self._matrix
+    def set_p_features(self, p_features):
+        self._p_features = p_features
 
-    def has_matrix(self):
-        return self._matrix is not None
+    def get_q_features(self):
+        return self._q_features
+
+    def get_p_features(self):
+        return self._p_features
+
+    def has_q_features(self):
+        return self._q_features is not None
+
+    def has_p_features(self):
+        return self._p_features is not None
 
     def has_children(self):
         return len(self.children) > 0
 
     transposition_access = 0
 
-    # creates a new PExpNode and appends it as a child
+    # creates a new PExpNode_v1_1 and appends it as a child
     # will fish out of transposition table if it finds a suitable match
     # note this does NOT compute q for child
     def create_child(self, move, transposition_table):
@@ -74,13 +84,13 @@ class PExpNode_v11:
         child = None
         # transposed position exists
         if child_found:
-            PExpNode.transposition_access += 1
+            PExpNode_v1_1.transposition_access += 1
             child = transposition_table[transposition_hash]
             child.parents.append(self)
-            if child.assigned_q:
+            if child.assigned_q():
                 self.children_with_q.append(child)
         else:
-            child = PExpNode(parent=self,
+            child = PExpNode_v1_1(parent=self,
                             is_maximizing=not self.is_maximizing,
                             full_move_list=new_move_list)
             transposition_table[transposition_hash] = child
@@ -90,7 +100,7 @@ class PExpNode_v11:
         return child, not child_found
 
     def get_sorted_moves(self):
-        valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
+        valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode_v1_1.UNASSIGNED_Q]
         return sorted(valid_children, key=lambda x: x[1].move_goodness, reverse=self.is_maximizing)
 
     # used ONLY for leaf assignment
@@ -101,11 +111,10 @@ class PExpNode_v11:
         self.game_status = game_status
 
         # for a leaf node, the principal variation is itself
+        assert not self.assigned_q()
         self.q = q
-        assert(PExpNode.MIN_Q <= q <= PExpNode.MAX_Q)
+        assert(PExpNode_v1_1.MIN_Q <= q <= PExpNode_v1_1.MAX_Q)
         self.principal_variation = self
-        assert(not self.assigned_q)
-        self.assigned_q = True
 
         for parent in self.parents:
             parent.children_with_q.append(self)
@@ -125,8 +134,8 @@ class PExpNode_v11:
     # Not sure if it applies regardless of parent
     def ab_valid(self):
         if len(self.parents) > 0 and self.parents[0].q:
-            return self.parents[0].is_maximizing and self.parents[0].q < PExpNode.MAX_Q \
-                    or not self.parents[0].is_maximizing and self.parents[0].q > PExpNode.MIN_Q
+            return self.parents[0].is_maximizing and self.parents[0].q < PExpNode_v1_1.MAX_Q \
+                    or not self.parents[0].is_maximizing and self.parents[0].q > PExpNode_v1_1.MIN_Q
         return True
 
     def assign_p(self, log_p):
@@ -156,7 +165,6 @@ class PExpNode_v11:
 
         self.principal_variation = self.best_child.principal_variation
         self.q = self.best_child.q
-        self.assigned_q = True
 
         self.assign_move_goodness()
 
@@ -175,8 +183,11 @@ class PExpNode_v11:
 
     # DEBUGGING METHODS
 
+    def assigned_q(self):
+        return self.q != PExpNode_v1_1.UNASSIGNED_Q
+
     def recursive_stats(self):
-        num_q = 1 if self.assigned_q else 0
+        num_q = 1 if self.assigned_q() else 0
         num_nodes = len(self.children)
         if not self.has_children():
             self.num_nodes = num_nodes
@@ -203,7 +214,7 @@ class PExpNode_v11:
     # Assert consistency
     def consistent_pv(self):
         if self.has_children():
-            valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
+            valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode_v1_1.UNASSIGNED_Q]
             assert(len(valid_children) == len(self.children_with_q))
             if len(valid_children) == 0:
                 return
@@ -215,7 +226,7 @@ class PExpNode_v11:
 
             assert(self.children[best_move].q - self.best_child.q < 1E-6)
 
-            if self.assigned_q:
+            if self.assigned_q():
                 if abs(self.q - self.children[best_move].q) > 1E-6:
                     print("Q Inconsistency")
                     print(self)
@@ -277,7 +288,7 @@ class PExpNode_v11:
     # does formal expansion rather than a move list check
     def real_principal_variation(self):
         sign = 1 if self.is_maximizing else -1
-        valid_children = [tup for tup in self.children.items() if tup[1].assigned_q]
+        valid_children = [tup for tup in self.children.items() if tup[1].assigned_q()]
         if len(valid_children) == 0:
             return []
         best_move, best_child = max(valid_children, key=lambda x: sign * x[1].move_goodness)
@@ -287,7 +298,7 @@ class PExpNode_v11:
     @classmethod
     # whether the q is from a game result (as opposed to an approximation of game state)
     def is_result_q(cls, q, epsilon=1E-7):
-        return abs(q) > PExpNode.MAX_Q - epsilon or abs(q) < epsilon
+        return abs(q) > PExpNode_v1_1.MAX_Q - epsilon or abs(q) < epsilon
 
     def __str__(self):
         if self.principal_variation:
