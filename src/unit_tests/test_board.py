@@ -75,6 +75,16 @@ class TestStringMethods(unittest.TestCase):
                 self.assertEqual(mat[x, y, Board.NO_PLAYER], Board.STONE_ABSENT)
                 self.assertEqual(mat[x, y, board.get_player_last_move()], Board.STONE_PRESENT)
 
+    def mass_play(self):
+        for i in range(1000):
+            board = Board(size=7, win_chain_length=4)
+            board.make_random_move()
+            if board.game_over():
+                self.assertTrue(board.game_won() or board.game_assume_drawn())
+            if board.game_assume_drawn():
+                self.assertTrue(board.game_over())
+
+
 if __name__ == '__main__':
     unittest.main()
 
