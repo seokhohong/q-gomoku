@@ -6,7 +6,7 @@ class GameRecord:
 
     # winning_player values
     DRAW = 0
-
+    # winning_player = Board.FIRST_PLAYER or Board.SECOND_PLAYER
     def __init__(self, initial_state_string, moves, winning_player, q_assessments):
         self.initial_state = initial_state_string
         self.moves = moves

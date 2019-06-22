@@ -63,9 +63,8 @@ class TestStringMethods(unittest.TestCase):
 
         trans = BoardTransform(size=9)
 
-        record = GameRecord.parse(gamestring)
-        for i in range(len(record.moves)):
-            index = trans.coordinate_to_index(*record.moves[i])
+        for i in range(int(len(p_labels) / 8)):
+            index = p_labels[i * 8]
             self.assertEqual(p_labels[i * 8: (i + 1) * 8], trans.get_rotated_points(index))
 
         for i in range(len(p_labels)):

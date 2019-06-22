@@ -119,8 +119,10 @@ class FeatureSet_v1_1:
         return self.p_features, self.p_labels
 
     def iterate_on(self, record):
-        initial_board = Board.load(record.get_initial_state())
+        board = Board.load(record.get_initial_state())
         q_assessments = record.get_q_assessments()
+
         for i, move in enumerate(record.get_moves()):
-            self.make_feature_tensors(initial_board, move, q_assessments[i][0], q_assessments[i][1])
-            initial_board.move(*move)
+            if record.get_winning_player() == board.get_player_to_move():
+                self.make_feature_tensors(board, move, q_assessments[i][0], q_assessments[i][1])
+            board.move(*move)
