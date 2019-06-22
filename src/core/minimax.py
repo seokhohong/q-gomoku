@@ -110,7 +110,7 @@ class PExpNode:
             PExpNode.transposition_access += 1
             child = transposition_table[transposition_hash]
             child.parents.append(self)
-            if child.assigned_q:
+            if child.is_assigned_q:
                 self.children_with_q.append(child)
         else:
             child = PExpNode(parent=self,
@@ -310,7 +310,7 @@ class PExpNode:
     # does formal expansion rather than a move list check
     def real_principal_variation(self):
         sign = 1 if self.is_maximizing else -1
-        valid_children = [tup for tup in self.children.items() if tup[1].assigned_q]
+        valid_children = [tup for tup in self.children.items() if tup[1].is_assigned_q]
         if len(valid_children) == 0:
             return []
         best_move, best_child = max(valid_children, key=lambda x: sign * x[1].move_goodness)

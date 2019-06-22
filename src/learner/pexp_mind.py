@@ -337,14 +337,14 @@ class PExpMind:
 
     def highest_leaf_qs(self, leaf_nodes, is_maximizing, max_p_eval=100, num_leaves=10):
         num_eval = min(max_p_eval, len(leaf_nodes))
-        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.assigned_q and leaf.game_status == GameState.NOT_OVER]
+        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.is_assigned_q and leaf.game_status == GameState.NOT_OVER]
         best_leaves = sorted(valid_leaves, key=lambda x: abs(x.q), reverse=True)
         return best_leaves[:num_leaves]
 
     def q_eval(self, nodes):
         parents_to_update = set()
         board_matrices = []
-        nodes = [node for node in nodes if not node.assigned_q]
+        nodes = [node for node in nodes if not node.is_assigned_q]
         for leaf in nodes:
             # normally not, but it can be if nodes = PV's children
             assert(leaf.game_status == GameState.NOT_OVER)
@@ -365,7 +365,7 @@ class PExpMind:
 
         for i, leaf in enumerate(nodes):
             # it's possible to have transposition assign q's even if we filtered above
-            if not leaf.assigned_q:
+            if not leaf.is_assigned_q:
                 leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
 
         for parent in parents_to_update:

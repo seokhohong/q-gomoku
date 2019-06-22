@@ -13,6 +13,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(board.get_spot(0, 0), Board.FIRST_PLAYER)
         board.move(0, 1)
         board.move(1, 1)
+        self.assertEqual(board.get_spot(1, 1), Board.SECOND_PLAYER)
         assert (board.chain_length(1, 1, -1, 0) == 1)
         assert (board.chain_length(1, 1, -1, -1) == 2)
         assert (board.chain_length(0, 0, 1, 1) == 2)

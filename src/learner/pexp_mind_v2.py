@@ -10,12 +10,11 @@ from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalizatio
 from keras.models import Model  # basic class for specifying and training a neural network
 from sortedcontainers import SortedList
 
-from src.learner.game_to_features import FeatureSet_v1_1
+from src.learner.game_to_features import FeatureSet_v1_1, FeatureBoard_v1_1
 
 class PExpMind_v2:
     def __init__(self, size, init=True):
 
-        self.feature_system = FeatureSet_v1_1
         self.size = size
         self.channels = FeatureSet_v1_1.CHANNELS
 
@@ -142,8 +141,8 @@ class PExpMind_v2:
 
         if root_node is None:
             root_node = PExpNodeV2(parent=None,
-                                                is_maximizing=is_maximizing,
-                                                full_move_list=minimax.MoveList(moves=(), position_hash=[]))
+                                    is_maximizing=is_maximizing,
+                                    full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
         principal_variations = [root_node]
 
@@ -245,20 +244,21 @@ class PExpMind_v2:
 
     def highest_leaf_qs(self, leaf_nodes, is_maximizing, max_p_eval=100, num_leaves=10):
         num_eval = min(max_p_eval, len(leaf_nodes))
-        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.assigned_q() and leaf.game_status == GameState.NOT_OVER]
+        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.is_assigned_q() and leaf.game_status == GameState.NOT_OVER]
         best_leaves = sorted(valid_leaves, key=lambda x: abs(x.q), reverse=True)
         return best_leaves[:num_leaves]
 
     def q_eval(self, nodes):
         parents_to_update = set()
         board_matrices = []
-        nodes = [node for node in nodes if not node.assigned_q]
+        nodes = [node for node in nodes if not node.is_assigned_q()]
         for leaf in nodes:
             # normally not, but it can be if nodes = PV's children
             assert(leaf.game_status == GameState.NOT_OVER)
             assert(not leaf.has_children())
             parents_to_update.update(leaf.parents)
-            board_matrices.append(self.feature_system.make_feature_tensors(leaf, ))
+            board_matrices.append(leaf.get_q_features())
+
 
         # if nothing to eval, get out
         if len(board_matrices) == 0:
@@ -273,7 +273,7 @@ class PExpMind_v2:
 
         for i, leaf in enumerate(nodes):
             # it's possible to have transposition assign q's even if we filtered above
-            if not leaf.assigned_q:
+            if not leaf.is_assigned_q():
                 leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
 
         for parent in parents_to_update:
@@ -294,12 +294,14 @@ class PExpMind_v2:
                 p_search_vectors.append(parent.get_p_features())
             else:
                 for move in parent.full_move_list.moves:
-                    board.blind_move(*move)
+                    self.feature_board.move(move)
 
-                p_search_vectors.append(self.feature_system.make_p_features(board, board.get_last_move))
+                features = self.feature_board.get_p_features()
+
+                p_search_vectors.append(features)
 
                 for _ in parent.full_move_list.moves:
-                    board.unmove()
+                    self.feature_board.unmove()
         return p_search_vectors
 
     accessed_transposition = 0
@@ -403,7 +405,8 @@ class PExpMind_v2:
 
                     else:
                         new_leaves.append(child)
-                        child.set_p_features(self.feature_system.make_p_features(board, board.get_last_move()))
+                        child.set_p_features(self.feature_board.get_p_features())
+                        child.set_q_features(self.feature_board.get_q_features())
 
                     # unmove for child
                     board.unmove()
@@ -411,8 +414,8 @@ class PExpMind_v2:
                     PExpMind_v2.accessed_transposition += 1
                     q_update.add(parent)
 
-    def q(self, board):
-        q_features = self.feature_system.make_q_features(board, board.get_last_move())
+    def q(self):
+        q_features = self.feature_board.get_q_features()
         return self.value_est.predict([np.array([q_features])])[0][0]
 
     def pick_random_move(self, board, possible_moves):
@@ -454,7 +457,9 @@ class PExpMind_v2:
     # with epsilon probability will select random move
     # returns whether game has concluded or not
     def make_move(self, board, as_player, verbose=True, epsilon=0.1, save_root=False, consistency_check=False):
-        current_q = self.q(board)
+
+        self.feature_board = FeatureBoard_v1_1(board)
+        current_q = self.q()
         assert(as_player == board.get_player_to_move())
 
         # incomplete
@@ -471,10 +476,10 @@ class PExpMind_v2:
         picked_action = 0
 
         # pick a suboptimal move randomly
-        if np.random.random_sample() < epsilon:
-            if verbose:
-                print('suboptimal move')
-            picked_action = self.pick_random_move(board, possible_moves)
+        #if np.random.random_sample() < epsilon:
+        #    if verbose:
+        #        print('suboptimal move')
+        #    picked_action = self.pick_random_move(board, possible_moves)
 
         if len(possible_moves) == 0:
             print("Error in P Expand Search")

@@ -1,15 +1,58 @@
 
 from src.core.board import Board, BoardTransform
 from src.core.game_record import GameRecord
-from src.learner.game_to_features import FeatureSet_v1_1
+from src.learner.game_to_features import FeatureSet_v1_1, FeatureBoard_v1_1
 import unittest
+import numpy as np
 
 class TestStringMethods(unittest.TestCase):
     def test_basic_parsing(self):
-        sample_gamestring = '{"initial_state": "9.120000000120000000120000000120000000000000000000000000000000000000000000000000000.1", "moves": [[4, 0]], "winning_player": 1, "q_assessments": [[-0.02823619917035103, 1.0]]}'
+        sample_gamestring = '{"initial_state": "{\"size\": \"9\", \"win_chain_length\": \"5\", \"boardstring\": \"120000000120000000120000000120000000000000000000000000000000000000000000000000000\", \"player_to_move\": \"1\"}", "moves": [[4, 0]], "winning_player": 1, "q_assessments": [[0.4541964530944824, 1.0]]}'
         feature_set = FeatureSet_v1_1(sample_gamestring)
         self.assertEqual(len(feature_set.get_q()[0]), 8)
         self.assertEqual(len(feature_set.get_p()[0]), 8)
+
+    def verify_sync(self, board, fboard):
+        for j in range(board.get_size()):
+            for k in range(board.get_size()):
+                if board.get_spot(j, k) == Board.FIRST_PLAYER:
+                    self.assertEqual(fboard.get_q_features()[j, k, 0], 1)
+                    self.assertEqual(fboard.get_q_features()[j, k, 1], 0)
+                elif board.get_spot(j, k) == Board.SECOND_PLAYER:
+                    self.assertEqual(fboard.get_q_features()[j, k, 1], 1)
+                else:
+                    self.assertEqual(fboard.get_q_features()[j, k, 0], 0)
+                    self.assertEqual(fboard.get_q_features()[j, k, 1], 0)
+
+    def test_feature_board(self):
+        size = 9
+        board = Board(size=size, win_chain_length=5)
+        fboard = FeatureBoard_v1_1(board)
+        self.assertEqual(fboard.get_q_features()[0][0][3], Board.FIRST_PLAYER)
+        self.assertEqual(np.sum(fboard.get_p_features()[:, :, 2]), 0)
+        self.verify_sync(board, fboard)
+        for i in range(20):
+            board.make_random_move()
+            last_move = board.get_last_move()
+            fboard.move(last_move)
+            self.assertEqual(np.sum(fboard.get_p_features()[:, :, 0]) + np.sum(fboard.get_p_features()[:, :, 1]), i + 1)
+            self.verify_sync(board, fboard)
+
+        for i in range(10):
+            board.unmove()
+            fboard.unmove()
+            self.verify_sync(board, fboard)
+
+        for i in range(1000):
+            if np.random.rand() < 0.5:
+                board.make_random_move()
+                last_move = board.get_last_move()
+                fboard.move(last_move)
+            elif board.get_last_move():
+                board.unmove()
+                fboard.unmove()
+            self.verify_sync(board, fboard)
+
 
     def validate_rotation(self):
         print('001001000000000000000000000000000001000000000002000000000000000000002200000000000'[68])
@@ -30,7 +73,7 @@ class TestStringMethods(unittest.TestCase):
         [-0.3656817376613617, -1.0], [-0.5807197690010071, -1.0], [-0.5815728902816772, -1.0], [-0.6264187693595886, -1.0], 
         [-0.5814750790596008, -1.0], [-0.4301098883152008, -1.0], [-0.45098164677619934, -1.0], [-0.5229567885398865, -1.0], 
         [-0.4639306664466858, -1.0], [-0.5296437740325928, -1.0], [-0.5666452050209045, -1.0]]}"""
-        feature_set = FeatureSet_v11(sample_gamestring)
+        feature_set = FeatureSet_v1_1(sample_gamestring)
 
         p_features, p_labels = feature_set.get_p()
 
@@ -56,6 +99,6 @@ class TestStringMethods(unittest.TestCase):
 
 if __name__ == '__main__':
     #unittest.main()
-    TestStringMethods().validate_rotation()
+    TestStringMethods().test_feature_board()
 
 

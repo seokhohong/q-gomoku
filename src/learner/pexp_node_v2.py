@@ -87,7 +87,7 @@ class PExpNodeV2:
             PExpNodeV2.transposition_access += 1
             child = transposition_table[transposition_hash]
             child.parents.append(self)
-            if child.assigned_q():
+            if child.is_assigned_q():
                 self.children_with_q.append(child)
         else:
             child = PExpNodeV2(parent=self,
@@ -111,7 +111,7 @@ class PExpNodeV2:
         self.game_status = game_status
 
         # for a leaf node, the principal variation is itself
-        assert not self.assigned_q()
+        assert not self.is_assigned_q()
         self.q = q
         assert(PExpNodeV2.MIN_Q <= q <= PExpNodeV2.MAX_Q)
         self.principal_variation = self
@@ -183,11 +183,11 @@ class PExpNodeV2:
 
     # DEBUGGING METHODS
 
-    def assigned_q(self):
+    def is_assigned_q(self):
         return self.q != PExpNodeV2.UNASSIGNED_Q
 
     def recursive_stats(self):
-        num_q = 1 if self.assigned_q() else 0
+        num_q = 1 if self.is_assigned_q() else 0
         num_nodes = len(self.children)
         if not self.has_children():
             self.num_nodes = num_nodes
@@ -226,7 +226,7 @@ class PExpNodeV2:
 
             assert(self.children[best_move].q - self.best_child.q < 1E-6)
 
-            if self.assigned_q():
+            if self.is_assigned_q():
                 if abs(self.q - self.children[best_move].q) > 1E-6:
                     print("Q Inconsistency")
                     print(self)
@@ -288,7 +288,7 @@ class PExpNodeV2:
     # does formal expansion rather than a move list check
     def real_principal_variation(self):
         sign = 1 if self.is_maximizing else -1
-        valid_children = [tup for tup in self.children.items() if tup[1].assigned_q()]
+        valid_children = [tup for tup in self.children.items() if tup[1].is_assigned_q()]
         if len(valid_children) == 0:
             return []
         best_move, best_child = max(valid_children, key=lambda x: sign * x[1].move_goodness)

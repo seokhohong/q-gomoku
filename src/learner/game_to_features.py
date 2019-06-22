@@ -4,6 +4,85 @@ import numpy as np
 from src.core.board import Board, BoardTransform
 from src.core.game_record import GameRecord
 
+from src.util import utils
+
+class FeatureBoard_v1_1:
+    CHANNELS = 4
+    def __init__(self, board):
+        self._size = board.get_size()
+        self._ops = []
+        self.tensor = np.zeros((self._size, self._size, FeatureBoard_v1_1.CHANNELS))
+        self._player_to_move = FeatureBoard_v1_1._board_player_to_value(board.get_player_to_move())
+        self._init(board)
+
+    @staticmethod
+    def _board_player_to_value(board_player):
+        return 1 if board_player == Board.FIRST_PLAYER else -1
+
+    def _init(self, board):
+        for i in range(board.get_size()):
+            for j in range(board.get_size()):
+                if board.get_spot(i, j) == Board.FIRST_PLAYER:
+                    self.tensor[i, j, 0] = 1
+                elif board.get_spot(i, j) == Board.SECOND_PLAYER:
+                    self.tensor[i, j, 1] = 1
+        self._update_last_player()
+
+    def _get_features(self):
+        return np.copy(self.tensor)
+
+    def get_p_features(self):
+        return self._get_features()
+
+    def get_q_features(self):
+        return self._get_features()
+
+    def _last_move(self):
+        return utils.peek_stack(self._ops)
+
+    def _clear_last_move(self, last_move):
+        if last_move:
+            self.tensor[last_move.x, last_move.y, 2] = 0
+
+    def _update_last_move(self, last_move):
+        if last_move:
+            self.tensor[last_move.x, last_move.y, 2] = 1
+
+    def _set_spot(self, move):
+        player_index = 0 if self._player_to_move == Board.FIRST_PLAYER else 1
+        self.tensor[move.x, move.y, player_index] = 1
+
+    def _clear_spot(self, move):
+        self.tensor[move.x, move.y, 0] = 0
+        self.tensor[move.x, move.y, 1] = 0
+
+    def _flip_player(self):
+        if self._player_to_move == Board.FIRST_PLAYER:
+            self._player_to_move = Board.SECOND_PLAYER
+        else:
+            self._player_to_move = Board.FIRST_PLAYER
+
+    def _update_last_player(self):
+        player_value = 1 if self._player_to_move == Board.FIRST_PLAYER else -1
+        self.tensor[:, :, 3].fill(player_value)
+
+    def move(self, move):
+        assert move
+        self._clear_last_move(self._last_move())
+        self._ops.append(move)
+        self._set_spot(move)
+        self._update_last_move(move)
+        self._update_last_player()
+        self._flip_player()
+
+    def unmove(self):
+        last_move = self._ops.pop()
+        self._clear_last_move(last_move)
+        self._clear_spot(last_move)
+        self._update_last_move(self._last_move())
+        self._update_last_player()
+        self._flip_player()
+
 class FeatureSet_v1_1:
     ALPHA = 0.2
     CHANNELS = 4
@@ -15,30 +94,6 @@ class FeatureSet_v1_1:
         self.channels = 4
         self.iterate_on(GameRecord.parse(record_string))
 
-    @staticmethod
-    def make_p_features(board, last_move):
-        return FeatureSet_v1_1.make_features(board, last_move)
-
-    @staticmethod
-    def make_q_features(board, last_move):
-        return FeatureSet_v1_1.make_features(board, last_move)
-
-    @staticmethod
-    def make_features(board, last_move):
-        tensor = np.zeros((board.get_size(), board.get_size(), FeatureSet_v1_1.CHANNELS))
-        for i in range(board.get_size()):
-            for j in range(board.get_size()):
-                if board.get_spot(i, j) == Board.FIRST_PLAYER:
-                    tensor[i, j, 0] = 1
-                elif board.get_spot(i, j) == Board.SECOND_PLAYER:
-                    tensor[i, j, 1] = 1
-                if (i, j) == last_move:
-                    tensor[i, j, 2] = 1
-        if board.get_player_to_move() == Board.FIRST_PLAYER:
-            tensor[:, :, 3].fill(1)
-        else:
-            tensor[:, :, 3].fill(-1)
-        return tensor
 
     def make_feature_tensors(self, board, last_move, next_move, curr_q, next_q):
         # board's last move should be last_move, next_move not performed yet
@@ -69,6 +124,3 @@ class FeatureSet_v1_1:
             self.make_feature_tensors(initial_board, last_move, move, q_assessments[i][0], q_assessments[i][1])
             print(initial_board.pprint())
             initial_board.move(*move)
-
-
-

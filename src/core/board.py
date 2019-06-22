@@ -126,9 +126,6 @@ class Board:
     def get_spot(self, x, y):
         return self._which_stone[x, y]
 
-    def get_spot(self, x, y):
-        return self._which_stone[x, y]
-
     def get_player_to_move(self):
         return self._player_to_move
 
