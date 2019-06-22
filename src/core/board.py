@@ -52,9 +52,11 @@ class BoardTransform:
     # Precomputes some useful rotation values
     def _cache_rotations(self):
         indices = np.array(range(self._size ** 2)).reshape(self._size, self._size, 1)
-        for matrix in self.get_rotated_matrices(indices):
+        for i, matrix in enumerate(self.get_rotated_matrices(indices)):
+            # iterate through the matrices
             for x in range(self._size):
                 for y in range(self._size):
+                    # where ever you see the matrix[x, y] value, indices[x, y] is where it originally started
                     self._cached_point_rotations[matrix[x, y, 0]].append(indices[x, y, 0])
 
 # Board class represents the state of the game

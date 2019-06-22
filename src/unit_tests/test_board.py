@@ -3,6 +3,7 @@ from src.core.board import Board, BoardTransform
 
 import json
 import unittest
+import numpy as np
 
 class TestStringMethods(unittest.TestCase):
     def test_chain_length(self):
@@ -58,14 +59,19 @@ class TestStringMethods(unittest.TestCase):
 
         board = Board(size=9, win_chain_length=5)
 
-        for move_x, move_y in [(4, 3), (2, 1)]:
-            board.move(move_x, move_y)
+        moves = [(0, 0), (2, 1), (5, 5), (4, 4)]
+        for i, move in enumerate(moves):
+            board.move(move[0], move[1])
             print(board.pprint())
-            index = rot.coordinate_to_index(move_x, move_y)
-            for point, mat in zip(rot.get_rotated_points(index), rot.get_rotated_matrices(board._matrix)):
+            index = rot.coordinate_to_index(move[0], move[1])
+            rotated_matrices = rot.get_rotated_matrices(board._matrix)
+            self.assertFalse(np.equal(rotated_matrices[0], rotated_matrices[2]).all())
+            for point, mat in zip(rot.get_rotated_points(index), rotated_matrices):
                 x, y = rot.index_to_coordinate(point)
-                #if mat[x, y, Board.FIRST_PLAYER] != Board.STONE_PRESENT:
-                #    print(x, y, mat[:, :, Board.FIRST_PLAYER])
+                #if mat[x, y, Board.NO_PLAYER] != Board.STONE_ABSENT:
+                #print(x, y, point)
+                #print(mat[:, :, Board.NO_PLAYER])
+                #print(mat[x, y, Board.NO_PLAYER])
                 self.assertEqual(mat[x, y, Board.NO_PLAYER], Board.STONE_ABSENT)
                 self.assertEqual(mat[x, y, board.get_player_last_move()], Board.STONE_PRESENT)
 

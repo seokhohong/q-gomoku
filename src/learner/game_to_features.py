@@ -94,7 +94,7 @@ class FeatureSet_v1_1:
         self.channels = 4
         self.iterate_on(GameRecord.parse(record_string))
 
-    def make_feature_tensors(self, board, last_move, next_move, curr_q, next_q):
+    def make_feature_tensors(self, board, next_move, curr_q, next_q):
         # board's last move should be last_move, next_move not performed yet
         feature_tensor = FeatureBoard_v1_1(board).get_p_features()
 
@@ -105,9 +105,12 @@ class FeatureSet_v1_1:
         for i in range(len(tensor_rotations)):
             self.q_features.append(tensor_rotations[i])
             # here is the q learning update
-            self.q_labels.append(curr_q * (1 - FeatureSet_v1_1.ALPHA) + next_q * FeatureSet_v1_1.ALPHA)
-            self.p_features.append(feature_tensor)
+            self.q_labels.append(self.bound_q(curr_q * (1 - FeatureSet_v1_1.ALPHA) + next_q * FeatureSet_v1_1.ALPHA))
+            self.p_features.append(tensor_rotations[i])
             self.p_labels.append(to_move_rotations[i])
+
+    def bound_q(self, q):
+        return max(min(q, 1.0), -1.0)
 
     def get_q(self):
         return self.q_features, self.q_labels
@@ -118,8 +121,6 @@ class FeatureSet_v1_1:
     def iterate_on(self, record):
         initial_board = Board.load(record.get_initial_state())
         q_assessments = record.get_q_assessments()
-        last_move = None
         for i, move in enumerate(record.get_moves()):
-            self.make_feature_tensors(initial_board, last_move, move, q_assessments[i][0], q_assessments[i][1])
-            print(initial_board.pprint())
+            self.make_feature_tensors(initial_board, move, q_assessments[i][0], q_assessments[i][1])
             initial_board.move(*move)
