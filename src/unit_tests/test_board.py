@@ -1,6 +1,7 @@
 
 from src.core.board import Board, BoardTransform
 
+import json
 import unittest
 
 class TestStringMethods(unittest.TestCase):
@@ -13,7 +14,7 @@ class TestStringMethods(unittest.TestCase):
         self.assertEqual(board.get_spot(0, 0), Board.FIRST_PLAYER)
         board.move(0, 1)
         board.move(1, 1)
-        self.assertEqual(board.get_spot(1, 1), Board.SECOND_PLAYER)
+        self.assertEqual(board.get_spot(1, 1), Board.FIRST_PLAYER)
         assert (board.chain_length(1, 1, -1, 0) == 1)
         assert (board.chain_length(1, 1, -1, -1) == 2)
         assert (board.chain_length(0, 0, 1, 1) == 2)
@@ -33,7 +34,7 @@ class TestStringMethods(unittest.TestCase):
         board = Board(size=9, win_chain_length=5)
         for i in range(10):
             board.make_random_move()
-            parsed_board = Board.parse_string(board.export_string())
+            parsed_board = Board.load(board.export())
             self.assertEqual(board.pprint(lastmove_highlight=False), parsed_board.pprint(lastmove_highlight=False))
             self.assertFalse(parsed_board.game_over())
             self.assertFalse(parsed_board.game_won())
@@ -43,6 +44,9 @@ class TestStringMethods(unittest.TestCase):
                 for k in range(board._matrix.shape[2]):
                     self.assertEqual(parsed_board._matrix[i, j, k], board._matrix[i, j, k])
 
+    def test_double_serialize(self):
+        board = Board(size=9, win_chain_length=5)
+        json.loads(json.dumps(board.export()))
 
     def test_rotator(self):
         rot = BoardTransform(size=9)

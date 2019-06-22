@@ -16,7 +16,7 @@ class GameRecord:
     # initial_board_state (Board): initial position of the game
     @classmethod
     def create(cls, initial_board_state):
-        return GameRecord(initial_board_state.export_string(), [], GameRecord.DRAW, [])
+        return GameRecord(initial_board_state.export(), [], GameRecord.DRAW, [])
 
     @classmethod
     def parse(cls, string):

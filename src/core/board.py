@@ -224,7 +224,7 @@ class Board:
         return Board.NO_PLAYER
 
     # simplest matrix representation of the board state
-    def export_string(self):
+    def export(self):
         flatmatrix = np.zeros((self._size, self._size))
         for x in range(self._size):
             for y in range(self._size):
@@ -232,10 +232,10 @@ class Board:
                     flatmatrix[x, y] = Board.FIRST_PLAYER
                 elif self._matrix[x, y, Board.SECOND_PLAYER] == 1:
                     flatmatrix[x, y] = Board.SECOND_PLAYER
-        return json.dumps({'size': str(self._size),
+        return {'size': str(self._size),
                            'win_chain_length': str(self._win_chain_length),
                             'boardstring': ''.join([str(elem) for elem in flatmatrix.astype(np.int32).reshape(-1)]),
-                            'player_to_move': str(self._player_to_move)})
+                            'player_to_move': str(self._player_to_move)}
 
     # takes a board string and recreates a game state from it (quite slow)
     @classmethod
@@ -259,8 +259,7 @@ class Board:
         return board
 
     @classmethod
-    def parse_string(Board, string):
-        item_dict = json.loads(string)
+    def load(Board, item_dict):
         return Board.create_board_from_specs(int(item_dict['size']),
                                              int(item_dict['win_chain_length']),
                                              item_dict['boardstring'])

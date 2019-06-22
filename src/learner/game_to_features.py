@@ -94,10 +94,9 @@ class FeatureSet_v1_1:
         self.channels = 4
         self.iterate_on(GameRecord.parse(record_string))
 
-
     def make_feature_tensors(self, board, last_move, next_move, curr_q, next_q):
         # board's last move should be last_move, next_move not performed yet
-        feature_tensor = self.make_features(board, last_move)
+        feature_tensor = FeatureBoard_v1_1(board).get_p_features()
 
         rot = BoardTransform(size=board.get_size())
         tensor_rotations = rot.get_rotated_matrices(feature_tensor)
@@ -117,7 +116,7 @@ class FeatureSet_v1_1:
         return self.p_features, self.p_labels
 
     def iterate_on(self, record):
-        initial_board = Board.parse_string(record.get_initial_state())
+        initial_board = Board.load(record.get_initial_state())
         q_assessments = record.get_q_assessments()
         last_move = None
         for i, move in enumerate(record.get_moves()):
