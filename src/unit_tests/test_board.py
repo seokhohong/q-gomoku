@@ -1,5 +1,6 @@
 
 from src.core.board import Board, BoardTransform
+
 import unittest
 
 class TestStringMethods(unittest.TestCase):
@@ -62,7 +63,6 @@ class TestStringMethods(unittest.TestCase):
                 #    print(x, y, mat[:, :, Board.FIRST_PLAYER])
                 self.assertEqual(mat[x, y, Board.NO_PLAYER], Board.STONE_ABSENT)
                 self.assertEqual(mat[x, y, board.get_player_last_move()], Board.STONE_PRESENT)
-
 
 if __name__ == '__main__':
     unittest.main()

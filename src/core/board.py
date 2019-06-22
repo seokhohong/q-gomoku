@@ -43,6 +43,12 @@ class BoardTransform:
     def get_rotated_points(self, point):
         return self._cached_point_rotations[point]
 
+    def coordinate_to_index(self, x, y):
+        return x * self._size + y
+
+    def index_to_coordinate(self, index):
+        return int(index / self._size), int(index % self._size)
+
     # Precomputes some useful rotation values
     def _cache_rotations(self):
         indices = np.array(range(self._size ** 2)).reshape(self._size, self._size, 1)
@@ -50,13 +56,6 @@ class BoardTransform:
             for x in range(self._size):
                 for y in range(self._size):
                     self._cached_point_rotations[matrix[x, y, 0]].append(indices[x, y, 0])
-
-    def coordinate_to_index(self, x, y):
-        return x * self._size + y
-
-    def index_to_coordinate(self, index):
-        return int(index / self._size), int(index % self._size)
-
 
 # Board class represents the state of the game
 
@@ -123,6 +122,9 @@ class Board:
         self._game_state = GameState.NOT_OVER
 
         self._num_moves -= 1
+
+    def get_spot(self, x, y):
+        return self._which_stone[x, y]
 
     def get_spot(self, x, y):
         return self._which_stone[x, y]

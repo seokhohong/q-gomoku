@@ -1,6 +1,5 @@
 
 import numpy as np
-import json
 
 from src.core.board import Board, BoardTransform
 from src.core.game_record import GameRecord
@@ -13,8 +12,8 @@ class FeatureSet_v1_1:
         self.q_labels = []
         self.p_features = []
         self.p_labels = []
-        self.iterate_on(GameRecord.parse(record_string))
         self.channels = 4
+        self.iterate_on(GameRecord.parse(record_string))
 
     @staticmethod
     def make_p_features(board, last_move):
