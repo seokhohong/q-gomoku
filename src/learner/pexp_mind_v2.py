@@ -3,7 +3,7 @@ import pickle
 import keras
 import numpy as np
 from src.core.board import Board, GameState
-from src.learner.pexp_node_v1_1 import PExpNode_v1_1
+from src.learner.pexp_node_v2 import PExpNodeV2
 from src.core import minimax
 from keras import losses
 from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalization
@@ -12,7 +12,7 @@ from sortedcontainers import SortedList
 
 from src.learner.game_to_features import FeatureSet_v1_1
 
-class PExpMind_v1_1:
+class PExpMind_v2:
     def __init__(self, size, init=True):
 
         self.feature_system = FeatureSet_v1_1
@@ -126,7 +126,7 @@ class PExpMind_v1_1:
             self.max_iterations = max_iterations
 
         def init(self):
-            self.root_node = PExpNode_v1_1(parent=None,
+            self.root_node = PExpNodeV2(parent=None,
                                       is_maximizing=self.is_maximizing,
                                       full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
@@ -141,7 +141,7 @@ class PExpMind_v1_1:
     def p_search(self, board, is_maximizing, root_node=None, save_root=True, consistency_check=False, verbose=True):
 
         if root_node is None:
-            root_node = PExpNode_v1_1(parent=None,
+            root_node = PExpNodeV2(parent=None,
                                                 is_maximizing=is_maximizing,
                                                 full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
@@ -267,8 +267,8 @@ class PExpMind_v1_1:
         # attach q predictions to all leaves and compute q tree at once
         q_predictions = np.clip(
                     self.value_est.predict(np.array(board_matrices), batch_size=1000).reshape(len(board_matrices)),
-                    a_max=PExpNode_v1_1.MAX_MODEL_Q,
-                    a_min=PExpNode_v1_1.MIN_MODEL_Q
+                    a_max=PExpNodeV2.MAX_MODEL_Q,
+                    a_min=PExpNodeV2.MIN_MODEL_Q
             )
 
         for i, leaf in enumerate(nodes):
@@ -393,7 +393,7 @@ class PExpMind_v1_1:
                     child.assign_p(log_p_prediction)
                     # if game is over, then we have our q
                     if board.game_won():
-                        winning_q = PExpNode_v1_1.MIN_Q if board.get_player_to_move() == Board.FIRST_PLAYER else PExpNode_v1_1.MAX_Q
+                        winning_q = PExpNodeV2.MIN_Q if board.get_player_to_move() == Board.FIRST_PLAYER else PExpNodeV2.MAX_Q
                         child.assign_q(winning_q, GameState.WON)
                         q_update.add(parent)
 
@@ -408,7 +408,7 @@ class PExpMind_v1_1:
                     # unmove for child
                     board.unmove()
                 else:
-                    PExpMind_v1_1.accessed_transposition += 1
+                    PExpMind_v2.accessed_transposition += 1
                     q_update.add(parent)
 
     def q(self, board):
@@ -458,7 +458,7 @@ class PExpMind_v1_1:
         assert(as_player == board.get_player_to_move())
 
         # incomplete
-        #starting_root = self.cleanse_memory_tree(self.memory_root, None, None)
+        starting_root = self.cleanse_memory_tree(self.memory_root, None, None)
 
         # array of [best_move, best_node], root node of move calculations
         is_maximizing = True if board.get_player_to_move() == Board.FIRST_PLAYER else False

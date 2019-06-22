@@ -1,7 +1,7 @@
 
 from src.core.match import Match
 from src.learner import pexp_mind
-from src.learner import pexp_mind_v1_1
+from src.learner import pexp_mind_v2
 import numpy as np
 
 import os
@@ -36,7 +36,7 @@ def init_pexp_mind(size):
 
 def init_new_mind(size):
 
-    mind = pexp_mind_v1_1.PExpMind_v1_1(size=size, init=True)
+    mind = pexp_mind_v2.PExpMind_v2(size=size, init=True)
 
     def expanding_p(depth, p):
         return np.logical_or.reduce([
