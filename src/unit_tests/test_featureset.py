@@ -61,6 +61,9 @@ class TestStringMethods(unittest.TestCase):
 
         p_features, p_labels = feature_set.get_p()
 
+        record = GameRecord.parse(gamestring)
+        self.assertLessEqual(len(p_labels) / BoardTransform.NUM_ROTATIONS, (len(record.moves) / 2) + 1)
+
         trans = BoardTransform(size=9)
 
         for i in range(int(len(p_labels) / 8)):

@@ -19,6 +19,7 @@ class GameState:
     NOT_OVER = 3
 
 class BoardTransform:
+    NUM_ROTATIONS = 8
     def __init__(self, size):
         self._size = size
         self._cached_point_rotations = defaultdict(list)
