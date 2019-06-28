@@ -173,14 +173,8 @@ class TestMind(unittest.TestCase):
         searcher.run(3)
         self.assertEqual(searcher.get_pv().calculate_pv_order(), [19, 46, 10])
 
-    def test_no_leaf_nodes(self):
-        mind = PExpMind_v3(size=9, init=False, search_params=None)
-        mind.load_net('../../models/voldmaster_' + str(0))
+    def just_no_crash_from_position(self, mind, board, moves, num_iterations):
 
-        cache = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_win_checks=False)
-        board = BitBoard(cache, size=9, win_chain_length=5)
-
-        moves = [41, 8, 2, 29, 73, 31, 49, 40, 33, 50, 30, 39, 57, 22]
         for move in moves:
             board.move(move)
 
@@ -193,29 +187,8 @@ class TestMind(unittest.TestCase):
                                    'q_fraction': 1
                                })
 
-        searcher.run(num_iterations=2)
-
-    def test_validate_root_q(self):
-        mind = PExpMind_v3(size=9, init=False, search_params=None)
-        mind.load_net('../../models/voldmaster_' + str(0))
-
-        cache = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_win_checks=False)
-        board = BitBoard(cache, size=9, win_chain_length=5)
-
-        moves = [23, 66, 44, 80, 35, 12, 33, 30, 31, 39, 40, 48, 75]
-        for move in moves:
-            board.move(move)
-
-        print(board)
-        searcher = PEvenSearch(board, mind.policy_est, mind.value_est,
-                               search_params={
-                                   'max_iterations': 2,
-                                   'min_child_p': -7,
-                                   'p_batch_size': 1 << 10,
-                                   'q_fraction': 1
-                               })
-
-        searcher.run(num_iterations=2)
+        searcher.run(num_iterations=num_iterations)
+        searcher.run()
 
     def test_able_to_draw(self):
         mind = PExpMind_v3(size=9, init=False, search_params=None)
@@ -224,24 +197,28 @@ class TestMind(unittest.TestCase):
         cache = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_win_checks=False)
         board = BitBoard(cache, size=9, win_chain_length=5)
 
+        # uninteresting moves for P
         moves = [37, 45, 74, 50, 47, 29, 31, 39, 49, 58, 48, 41, 40, 32, 22, 13, 23, 59, 68, 21, 60, 36, 5, 42, 34, 20,
                  67, 57, 56, 65, 52, 44, 38, 12, 30, 14, 11, 15, 16, 43, 46, 54, 66, 18, 27, 72, 63, 28, 4, 69, 76, 55,
                  75, 77, 25, 7, 24, 26, 53, 61, 78, 73, 19, 8, 64, 35, 62, 79, 51, 6, 17, 3]
 
-        for move in moves:
-            board.move(move)
+        self.just_no_crash_from_position(mind, board, moves, num_iterations=2)
 
-        print(board)
-        searcher = PEvenSearch(board, mind.policy_est, mind.value_est,
-                               search_params={
-                                   'max_iterations': 2,
-                                   'min_child_p': -7,
-                                   'p_batch_size': 1 << 10,
-                                   'q_fraction': 1
-                               })
+        # last move on the board
+        moves = [70, 69, 10, 42, 43, 25, 50, 40, 49, 48, 32, 41, 39, 58, 38, 31, 51, 22, 13, 52, 21, 29, 67, 59, 56, 37,
+                 61, 30, 28, 47, 12, 14, 11, 9, 33, 3, 23, 53, 27, 24, 6, 46, 57, 19, 55, 2, 44, 34, 4, 74, 7, 36, 5, 8,
+                 54, 62, 16, 65, 66, 78, 75, 68, 1, 15, 76, 77, 26, 35, 45, 63, 18, 60, 79, 20, 0, 64, 80, 72, 73, 17]
 
-        searcher.run(num_iterations=2)
-        searcher.run()
+        self.just_no_crash_from_position(mind, board, moves, num_iterations=2)
+
+        # instant win
+        moves = [23, 66, 44, 80, 35, 12, 33, 30, 31, 39, 40, 48, 75]
+        self.just_no_crash_from_position(mind, board, moves, num_iterations=2)
+
+        # no leaf nodes
+        moves = [41, 8, 2, 29, 73, 31, 49, 40, 33, 50, 30, 39, 57, 22]
+        self.just_no_crash_from_position(mind, board, moves, num_iterations=2)
+
 
 if __name__ == '__main__':
     unittest.main()

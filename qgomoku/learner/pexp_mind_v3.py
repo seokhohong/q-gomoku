@@ -400,6 +400,8 @@ class PEvenSearch:
         if self.root_node.self_q is None:
             self.make_root_q()
 
+    # this can happen when the p network doesn't have a strong opinio about what moves are going to be made
+    # usually at the end the game
     # forces a split evenly among remaining moves
     def fill_null_pv(self):
         assert self.get_pv() is None
@@ -407,9 +409,12 @@ class PEvenSearch:
         available_moves = self.thought_board.available_moves()
         for move in available_moves:
             self.create_child(self.root_node, move)
-            # state doesn't matter, this is just returning some random move
-            self.root_node.get_child(move).assign_p(np.log(1.0 / len(available_moves)))
-            self.root_node.get_child(move).assign_leaf_q(0, GameState.NOT_OVER)
+            child = self.root_node.get_child(move)
+            # state doesn't matter, this is just returning some random move, so uniform p distribution
+            child.assign_p(np.log(1.0 / len(available_moves)))
+            # it could be assigned a hard q
+            if not child.is_assigned_q():
+                child.assign_leaf_q(0, GameState.NOT_OVER)
         self.root_node.recalculate_q()
 
     def run(self, num_iterations=None):
