@@ -93,6 +93,10 @@ class PExpNodeV3:
     def get_children(self):
         return self._children.values()
 
+    def get_children_highest_p(self, k):
+        top_children = sorted(list(self._children.values()), key=lambda x: x.p_comparator)
+        return top_children[:min(len(top_children), k)]
+
     def get_children_moves(self):
         return self._children.keys()
 
@@ -247,6 +251,8 @@ class PExpNodeV3:
         chain.reverse()
         return chain
 
+    def has_self_q(self):
+        return self.self_q is not None
 
     def is_assigned_q(self):
         return self._principal_variation is not None

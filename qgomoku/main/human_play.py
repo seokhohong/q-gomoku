@@ -20,6 +20,7 @@ def play():
         'max_iterations': 10,
         'min_child_p': -7,
         'p_batch_size': 1 << 10,
+        'num_pv_expand': 25,
         'q_fraction': 1
     })
     mind.load_net('../../models/voldmaster_' + str(0))
@@ -58,14 +59,15 @@ def play():
             print(board)
         else:
             print('Computer is thinking...')
+            print(board._ops)
 
             move, current_q, best_q = mind.make_move(board)
             print(" ")
             print(move, 'Q:', best_q)
 
-            if best_q > PExpNode.MAX_MODEL_Q:
-                print('Computer Resigns!')
-                break
+            #if best_q > PExpNode.MAX_MODEL_Q :
+            #    print('Computer Resigns!')
+            #    break
 
             board.move(move)
             print(board)

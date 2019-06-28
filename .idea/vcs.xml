@@ -2,11 +2,5 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/q-gomoku" vcs="Git" />
-<<<<<<< HEAD
-    <mapping directory="$PROJECT_DIR$/q-gomoku-backup" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/q-gomoku-backup/q-gomoku" vcs="Git" />
-=======
->>>>>>> 937f05872da2cfb7099e505c278e02c29c51d27d
   </component>
 </project>

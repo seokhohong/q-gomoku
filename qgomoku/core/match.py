@@ -5,9 +5,10 @@ from qgomoku.core.game_record import GameRecord
 
 # a match between two ai's
 class Match:
-    def __init__(self, mind1, mind2, size=9, random_seed=42, opening_moves=10, draw_point=50, trivialize=False):
-        cache = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_win_checks=False)
-        self.board = BitBoard(cache, size=9, win_chain_length=5)
+    def __init__(self, mind1, mind2, size=9, random_seed=42, opening_moves=10, draw_point=50,
+                 trivialize=False, verbose=False):
+        cache = BitBoardCache("../cache/9-magics", size=size, win_chain_length=5, force_build_win_checks=False)
+        self.board = BitBoard(cache, size=size, win_chain_length=5)
 
         random_state = np.random.RandomState(random_seed)
 
@@ -20,6 +21,7 @@ class Match:
 
         self.players = {Player.FIRST: mind1, Player.SECOND: mind2}
         self.game_record = GameRecord.create(self.board)
+        self._verbose = verbose
 
     def play(self):
         print(self.board)
@@ -31,6 +33,8 @@ class Match:
             self.game_record.add_move(move, current_q, best_q)
             self.board.move(move)
             print(self.board.pprint(), move, current_q, best_q)
+            if self._verbose:
+                print(self.board._ops)
 
             if self.board.game_over():
                 self.game_record.set_winner(self.board.get_winning_player())

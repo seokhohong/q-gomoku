@@ -97,9 +97,9 @@ def play_step(size=9, step=3):
 
 def play_oldmaster():
     mind = PExpMind_v3(size=9, init=False, search_params={
-                       'max_iterations': 10,
+                       'max_iterations': 3,
                        'min_child_p': -7,
-                       'p_batch_size': 1 << 12,
+                       'p_batch_size': 1 << 10,
                        'q_fraction': 1
     })
     mind.load_net('../../models/voldmaster_' + str(0))
@@ -108,9 +108,10 @@ def play_oldmaster():
 def play():
     size = 9
     player = play_oldmaster()
-    match = Match(player, player, trivialize=False)
-    result = match.play()
-    print(result)
+    for i in range(100):
+        match = Match(player, player, trivialize=False, verbose=True)
+        result = match.play()
+        print(result)
 
 if __name__ == "__main__":
     play()

@@ -168,8 +168,9 @@ class BitBoardCache:
 
 
     def _save(self):
-        with open(self._filename, 'wb') as f:
-            pickle.dump((self._delta_masks, self._win_checks), f)
+        if os.path.exists(os.path.dirname(self._filename)):
+            with open(self._filename, 'wb') as f:
+                pickle.dump((self._delta_masks, self._win_checks), f)
 
 # High performance board relying on bit manipulation to track game status
 class BitBoard:

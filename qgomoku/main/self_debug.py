@@ -20,32 +20,23 @@ def debug_game():
     cache = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_win_checks=False)
     board = BitBoard(cache, size=9, win_chain_length=5)
 
-    moves = [
-        (7, 1), (0, 1),
-        (7, 3), (1, 7),
-        (7, 4), (3, 1),
-        (3, 2), (4, 1),
-        (3, 4), (6, 1),
-        (6, 3), (6, 2),
-        (5, 2), (8, 7),
-        (7, 7), (6, 8),
-        (5, 8), (1, 6),
-        (2, 7)
-    ]
+    moves = [37, 45, 74, 50, 47, 29, 31, 39, 49, 58, 48, 41, 40, 32, 22, 13, 23, 59, 68, 21, 60, 36, 5, 42, 34, 20, 67, 57, 56, 65, 52, 44, 38, 12, 30, 14, 11, 15, 16, 43, 46, 54, 66, 18, 27, 72, 63, 28, 4, 69, 76, 55, 75, 77, 25, 7, 24, 26, 53, 61, 78, 73, 19, 8, 64, 35, 62, 79, 51, 6, 17, 3]
+
     for move in moves:
-        board.move_coord(*move)
+        board.move(move)
 
     print(board)
     searcher = PEvenSearch(board, mind.policy_est, mind.value_est,
                            search_params={
-                               'max_iterations': 10,
+                               'max_iterations': 2,
                                'min_child_p': -7,
                                'p_batch_size': 1 << 10,
                                'q_fraction': 1
                            })
 
-    searcher.run(3)
-    print(searcher.get_pv().calculate_pv_order(), [19, 46, 10])
+    searcher.run(num_iterations=2)
+    searcher.run()
+
 
 if __name__ == "__main__":
     import cProfile, pstats

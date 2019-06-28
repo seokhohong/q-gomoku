@@ -280,6 +280,10 @@ class PEvenSearch:
             self.validate_recursively(child)
 
     def pv_expansion(self, to_p_expand):
+        # if we don't have anything to expand
+        if len(to_p_expand) == 0:
+            return []
+
         if to_p_expand[0].p_comparator > self._top_all_p[-1].p_comparator or len(self._top_all_p) < self._num_pv_expand:
             combined_top_p = list(set(self._top_all_p).union(set(to_p_expand[:self._num_pv_expand])))
             self._top_all_p = sorted(combined_top_p, key=lambda x: x.p_comparator)
@@ -301,6 +305,7 @@ class PEvenSearch:
         highest_p = self.highest_p(k=self.p_batch_size)
         top_pvs = self.pv_expansion(highest_p)
         self.compute_p(highest_p + top_pvs)
+        return top_pvs
 
     def compute_q(self, candidates):
         # we compute only for nodes that haven't finished the game
@@ -308,6 +313,7 @@ class PEvenSearch:
         # recalculate qs only on parents
         parents = set()
         original_candidates = len(candidates)
+        assert len(candidates) == len(set(candidates))
         candidates = [node for node in candidates if not node.is_assigned_q()]
 
         q_nodes = []
@@ -324,6 +330,10 @@ class PEvenSearch:
 
         print('Candidate Q', original_candidates, 'Compute Q', len(q_features))
 
+        # if we don't have any q's to expand after hard_q assessment
+        if len(q_features) == 0:
+            return
+
         q_predictions = np.clip(self.value_est.predict(np.array(q_features), batch_size=len(q_features)).reshape(-1),
                                 a_min=PExpNodeV3.MIN_MODEL_Q, a_max=PExpNodeV3.MAX_MODEL_Q)
 
@@ -334,17 +344,35 @@ class PEvenSearch:
         for parent in parents:
             parent.recalculate_q()
 
+    # this is necessary for learning data, regardless of root pv or whatnot
+    def make_root_q(self):
+        self.thought_board.reset()
+        q_features = [self.thought_board.get_q_features()]
+        root_q = np.clip(self.value_est.predict(np.array(q_features), batch_size=len(q_features)).reshape(-1),
+                            a_min=PExpNodeV3.MIN_MODEL_Q, a_max=PExpNodeV3.MAX_MODEL_Q)[0]
+
+        self.root_node.self_q = root_q
 
     def highest_p(self, k):
         return sorted(list(self.expandable_nodes), key=lambda x: x.p_comparator)[:k]
         #return [leaf for leaf in self.expandable_nodes.islice(0, k)]
 
     def q_eval(self):
+
         highest_p = self.highest_p(k=int(self.p_batch_size * self.fraction_q))
-        # root q is necessary for training data purposes
-        if not self.root_node.is_assigned_q():
-            highest_p.append(self.root_node)
-        self.compute_q(highest_p)
+
+        to_eval = set(highest_p)
+
+        # look at the top pv's and evaluate all of their children
+        # since they've gone through a p expansion but don't necessarily have q's
+        top_pvs = self.pv_expansion(highest_p)
+        for top_pv in top_pvs:
+            # should be a parameter
+            to_eval.update(top_pv.get_children_highest_p(3))
+
+        # we may not have anything to evaluate
+        if len(to_eval) > 0:
+            self.compute_q(to_eval)
 
     def validate_expandable_integrity(self):
         # make sure we're not expanding any game-over nodes
@@ -353,19 +381,51 @@ class PEvenSearch:
                 assert not self.thought_board.game_over_after(node.get_move_chain())
 
     def run_iteration(self):
+        # no moves to evaluate
+        if len(self.expandable_nodes) == 0:
+            return
+
         self.p_expand()
+
         if self._verbose:
             print('Num Leaf Nodes', len(self.expandable_nodes), 'Transposition', self.transposition_table.get_num_hits())
         #self.validate_whole_tree()
+
         self.q_eval()
+
         if self._verbose:
-            print(self.root_node.get_principal_variation())
+            print('PV: ', self.root_node.get_principal_variation())
+
+        # this is necessary for training data
+        if self.root_node.self_q is None:
+            self.make_root_q()
+
+    # forces a split evenly among remaining moves
+    def fill_null_pv(self):
+        assert self.get_pv() is None
+        self.thought_board.reset()
+        available_moves = self.thought_board.available_moves()
+        for move in available_moves:
+            self.create_child(self.root_node, move)
+            # state doesn't matter, this is just returning some random move
+            self.root_node.get_child(move).assign_p(np.log(1.0 / len(available_moves)))
+            self.root_node.get_child(move).assign_leaf_q(0, GameState.NOT_OVER)
+        self.root_node.recalculate_q()
 
     def run(self, num_iterations=None):
         if num_iterations is None:
             num_iterations = self.max_iterations
         for i in range(num_iterations):
             self.run_iteration()
+
+        # no moves to make according to p expansion
+        if self.get_pv() is None:
+            self.fill_null_pv()
+
+        pv = self.get_pv()
+
+        assert pv.get_q() is not None
+        assert self.root_node.self_q is not None
         return self
 
 
@@ -501,8 +561,7 @@ class PExpMind_v3:
             searcher = self.make_search(board)
         searcher.run()
         pv = searcher.get_pv()
-        assert pv.get_q() is not None
-        assert searcher.root_node.self_q is not None
+
         return pv.calculate_pv_order()[0], searcher.root_node.self_q, pv.get_q()
 
     def pickle_root(self, board, root_node):
