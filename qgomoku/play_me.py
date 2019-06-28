@@ -1,7 +1,7 @@
 
-from src.learner import pexp_mind
-from src.core.board import Board
-from src.core.minimax import PExpNode
+from qgomoku.learner import pexp_mind
+from qgomoku.core.board import Board
+from qgomoku.core.minimax import PExpNode
 import numpy as np
 
 import random

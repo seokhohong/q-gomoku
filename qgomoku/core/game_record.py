@@ -1,6 +1,6 @@
 import numpy as np
 import json
-import pickle
+from qgomoku.core.board import Board, BoardTransform, Player
 
 class GameRecord:
 
@@ -10,7 +10,7 @@ class GameRecord:
     def __init__(self, initial_state_string, moves, winning_player, q_assessments):
         self.initial_state = initial_state_string
         self.moves = moves
-        self._winning_player = winning_player
+        self._winning_player = Player.get(winning_player)
         self.q_assessments = q_assessments
 
     # initial_board_state (Board): initial position of the game
@@ -32,7 +32,7 @@ class GameRecord:
 
     def add_move(self, move, curr_q, best_q):
         # assert we have not concluded the game yet
-        if self._winning_player != GameRecord.DRAW:
+        if self._winning_player != Player.NONE:
             raise ValueError
         self.moves.append(move)
         self.q_assessments.append((GameRecord.PrettyFloat(curr_q), GameRecord.PrettyFloat(best_q)))
@@ -44,10 +44,18 @@ class GameRecord:
         obj_dict = {
             'initial_state': self.initial_state,
             'moves': self.moves,
-            'winning_player': self._winning_player,
+            'winning_player': self._winning_player.value,
             'q_assessments': self.q_assessments
         }
         return json.dumps(obj_dict)
+
+    def replay(self):
+        board = Board.load(self.initial_state)
+        print(board.pprint())
+        for i, move in enumerate(self.moves):
+            print('Q', self.q_assessments[i])
+            board.move(move)
+            print(board.pprint())
 
     def get_initial_state(self):
         return self.initial_state

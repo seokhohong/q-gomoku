@@ -2,25 +2,30 @@ import pickle
 
 import keras
 import numpy as np
-from src.core.board import Board, GameState
-from src.learner.pexp_node_v2 import PExpNodeV2
-from src.core import minimax
+from qgomoku.core.board import Board, GameState
+from qgomoku.core.minimax import PExpNode
+from qgomoku.core import minimax
 from keras import losses
 from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalization
 from keras.models import Model  # basic class for specifying and training a neural network
 from sortedcontainers import SortedList
 
-from src.learner.game_to_features import FeatureSet_v1_1, FeatureBoard_v1_1
 
-class PExpMind_v2:
-    def __init__(self, size, init=True):
+class PExpMind:
+    def __init__(self, size, channels=1, init=True):
 
         self.size = size
-        self.channels = FeatureSet_v1_1.CHANNELS
+        self.channels = channels
 
-        assert size == 9
-        self.value_est = self.value_model_9()
-        self.policy_est = self.policy_model_9()
+        if self.size == 7:
+            self.value_est = self.value_model_7()
+            self.policy_est = self.policy_model_7()
+        elif self.size == 9:
+            self.value_est = self.value_model_9()
+            self.policy_est = self.policy_model_9()
+        else:
+            self.value_est = self.get_value_model()
+            self.policy_est = self.get_policy_model()
 
         # search and training parameters
         self._max_expansion = lambda depth: np.inf if depth < 2 else 5
@@ -31,7 +36,7 @@ class PExpMind_v2:
         self.max_iters = 10
         self.required_depth = 4
 
-        # initialization with random examples so we can immediately predict
+        # initialization
         init_examples = 10
 
         if init:
@@ -46,6 +51,29 @@ class PExpMind_v2:
         self.fitted = False
 
         self.memory_root = None
+
+    def value_model_7(self):
+        inp = Input(shape=(self.size, self.size, self.channels))
+
+        # key difference between this and conv network is padding
+        conv_1 = Convolution2D(64, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(inp)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
+        bn3 = BatchNormalization()(conv_2)
+
+        flat = Flatten()(bn3)
+
+        hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        bn_final = BatchNormalization()(hidden)
+
+        out = Dense(1, use_bias=False)(bn_final)
+
+        model = Model(inputs=[inp], outputs=out)
+        model.compile(loss=losses.mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
+
+        return model
 
     def value_model_9(self):
         inp = Input(shape=(self.size, self.size, self.channels))
@@ -70,6 +98,35 @@ class PExpMind_v2:
 
         model = Model(inputs=[inp], outputs=out)
         model.compile(loss=losses.mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
+
+        return model
+
+    def policy_model_7(self):
+        inp = Input(shape=(self.size, self.size, self.channels))
+
+        # key difference between this and conv network is padding
+        conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(inp)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(32, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
+        bn3 = BatchNormalization()(conv_2)
+        conv_3 = Convolution2D(16, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn3)
+        bn4 = BatchNormalization()(conv_3)
+        conv_4 = Convolution2D(8, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn4)
+        bn5 = BatchNormalization()(conv_4)
+
+        flat = Flatten()(bn5)
+
+        hidden = Dense(self.size ** 2, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        bn_final = BatchNormalization()(hidden)
+
+        out = Dense(self.size ** 2, activation='softmax')(bn_final)
+
+        model = Model(inputs=[inp], outputs=out)
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         return model
 
@@ -106,6 +163,63 @@ class PExpMind_v2:
 
         return model
 
+    def get_value_model(self):
+        inp = Input(shape=(self.size, self.size, self.channels))
+
+        # key difference between this and conv network is padding
+        conv_1 = Convolution2D(64, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(inp)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
+        bn3 = BatchNormalization()(conv_2)
+        #conv_3 = Convolution2D(32, (3, 3), padding='valid', activation='relu',
+        #                       kernel_initializer='random_normal', use_bias=False)(bn3)
+        #bn4 = BatchNormalization()(conv_3)
+        #conv_4 = Convolution2D(16, (3, 3), padding='valid', activation='relu',
+        #                       kernel_initializer='random_normal', use_bias=False)(bn4)
+        #bn5 = BatchNormalization()(conv_4)
+
+        flat = Flatten()(bn3)
+
+        hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        bn_final = BatchNormalization()(hidden)
+
+        out = Dense(1, use_bias=False)(bn_final)
+
+        model = Model(inputs=[inp], outputs=out)
+        model.compile(loss=losses.mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
+
+        return model
+
+    def get_policy_model(self):
+        inp = Input(shape=(self.size, self.size, self.channels))
+
+        # key difference between this and conv network is padding
+        conv_1 = Convolution2D(64, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(inp)
+        bn2 = BatchNormalization()(conv_1)
+        conv_2 = Convolution2D(32, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn2)
+        bn3 = BatchNormalization()(conv_2)
+        conv_3 = Convolution2D(16, (3, 3), padding='same', activation='relu',
+                               kernel_initializer='random_normal', use_bias=False)(bn3)
+        bn4 = BatchNormalization()(conv_3)
+        #conv_4 = Convolution2D(8, (3, 3), padding='same', activation='relu',
+        #                       kernel_initializer='random_normal', use_bias=False)(bn4)
+        #bn5 = BatchNormalization()(conv_4)
+
+        flat = Flatten()(bn4)
+
+        hidden = Dense(10, activation='relu', kernel_initializer='random_normal', use_bias=False)(flat)
+        bn_final = BatchNormalization()(hidden)
+
+        out = Dense(self.size ** 2, activation='softmax')(bn_final)
+
+        model = Model(inputs=[inp], outputs=out)
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+
+        return model
 
     def pvs_k_principal_variations(self, leaf_nodes):
         # include the best move according to q
@@ -117,32 +231,12 @@ class PExpMind_v2:
                 break
         return principal_variations
 
-    class PEvenSearch:
-        def __init__(self, board, max_iterations=10, verbose=True):
-            self.board = board
-            self.verbose = verbose
-            self.is_maximizing = True if board.get_player_to_move() == Board.FIRST_PLAYER else False
-            self.max_iterations = max_iterations
-
-        def init(self):
-            self.root_node = PExpNodeV2(parent=None,
-                                      is_maximizing=self.is_maximizing,
-                                      full_move_list=minimax.MoveList(moves=(), position_hash=[]))
-
-            # transposition hash, Node
-            self.transposition_table = {}
-
-
-        def run(self):
-            self.init()
-
-
     def p_search(self, board, is_maximizing, root_node=None, save_root=True, consistency_check=False, verbose=True):
 
         if root_node is None:
-            root_node = PExpNodeV2(parent=None,
-                                    is_maximizing=is_maximizing,
-                                    full_move_list=minimax.MoveList(moves=(), position_hash=[]))
+            root_node = PExpNode(parent=None,
+                                                is_maximizing=is_maximizing,
+                                                full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
         principal_variations = [root_node]
 
@@ -165,18 +259,17 @@ class PExpMind_v2:
 
             # the ways P search terminates
             if i > self.max_iters:
-                break
                 # break if there's some hanging issue
-                #if i > self.max_iters * 5:
-                #    break
+                if i > self.max_iters * 5:
+                    break
 
                 # same child has been best child for awhile now
-                #if len(set(best_children[-self._move_convergence_count:])) == 1\
-                #        and len(root_node.principal_variation.full_move_list) > self.required_depth:
-                #    break
+                if len(set(best_children[-self._move_convergence_count:])) == 1\
+                        and len(root_node.principal_variation.full_move_list) > self.required_depth:
+                    break
 
-                #if root_node.principal_variation.game_status == GameState.DRAW:
-                #    break
+                if root_node.principal_variation.game_status == GameState.DRAW:
+                    break
 
             # searching doesn't get us anywhere for awhile
             if root_node.principal_variation and root_node.principal_variation.q:
@@ -244,21 +337,20 @@ class PExpMind_v2:
 
     def highest_leaf_qs(self, leaf_nodes, is_maximizing, max_p_eval=100, num_leaves=10):
         num_eval = min(max_p_eval, len(leaf_nodes))
-        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.is_assigned_q() and leaf.game_status == GameState.NOT_OVER]
+        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.is_assigned_q and leaf.game_status == GameState.NOT_OVER]
         best_leaves = sorted(valid_leaves, key=lambda x: abs(x.q), reverse=True)
         return best_leaves[:num_leaves]
 
     def q_eval(self, nodes):
         parents_to_update = set()
         board_matrices = []
-        nodes = [node for node in nodes if not node.is_assigned_q()]
+        nodes = [node for node in nodes if not node.is_assigned_q]
         for leaf in nodes:
             # normally not, but it can be if nodes = PV's children
             assert(leaf.game_status == GameState.NOT_OVER)
             assert(not leaf.has_children())
             parents_to_update.update(leaf.parents)
-            board_matrices.append(leaf.get_q_features())
-
+            board_matrices.append(leaf.get_matrix())
 
         # if nothing to eval, get out
         if len(board_matrices) == 0:
@@ -267,14 +359,14 @@ class PExpMind_v2:
         # attach q predictions to all leaves and compute q tree at once
         q_predictions = np.clip(
                     self.value_est.predict(np.array(board_matrices), batch_size=1000).reshape(len(board_matrices)),
-                    a_max=PExpNodeV2.MAX_MODEL_Q,
-                    a_min=PExpNodeV2.MIN_MODEL_Q
+                    a_max=PExpNode.MAX_MODEL_Q,
+                    a_min=PExpNode.MIN_MODEL_Q
             )
 
         for i, leaf in enumerate(nodes):
             # it's possible to have transposition assign q's even if we filtered above
-            if not leaf.is_assigned_q():
-                leaf.assign_q(q_predictions[i], GameState.NOT_OVER)
+            if not leaf.is_assigned_q:
+                leaf.assign_leaf_q(q_predictions[i], GameState.NOT_OVER)
 
         for parent in parents_to_update:
             parent.recalculate_q()
@@ -290,18 +382,16 @@ class PExpMind_v2:
         p_search_vectors = []
         for parent in nodes_to_expand:
             # for each move except the last, make rapid moves on board
-            if parent.has_p_features():
-                p_search_vectors.append(parent.get_p_features())
+            if parent.has_matrix():
+                p_search_vectors.append(parent.get_matrix())
             else:
                 for move in parent.full_move_list.moves:
-                    self.feature_board.move(move)
+                    board.blind_move(*move)
 
-                features = self.feature_board.get_p_features()
-
-                p_search_vectors.append(features)
+                p_search_vectors.append(board.get_matrix())
 
                 for _ in parent.full_move_list.moves:
-                    self.feature_board.unmove()
+                    board.unmove()
         return p_search_vectors
 
     accessed_transposition = 0
@@ -340,7 +430,8 @@ class PExpMind_v2:
         p_search_vectors = self.get_board_vectors(board, nodes_to_expand)
         p_search_nodes = list(nodes_to_expand)
 
-        p_board_vectors = np.array(p_search_vectors).reshape((len(p_search_vectors), self.size, self.size, self.channels))
+        p_board_vectors = np.array(p_search_vectors).reshape(len(p_search_vectors), self.size, self.size,
+                                                             self.channels)
 
         log_p_predictions = np.log(self.policy_est.predict([p_board_vectors], batch_size=len(p_board_vectors))).reshape(-1)
 
@@ -395,28 +486,26 @@ class PExpMind_v2:
                     child.assign_p(log_p_prediction)
                     # if game is over, then we have our q
                     if board.game_won():
-                        winning_q = PExpNodeV2.MIN_Q if board.get_player_to_move() == Board.FIRST_PLAYER else PExpNodeV2.MAX_Q
-                        child.assign_q(winning_q, GameState.WON)
+                        winning_q = PExpNode.MIN_Q if board.get_player_to_move() == Board.FIRST_PLAYER else PExpNode.MAX_Q
+                        child.assign_leaf_q(winning_q, GameState.WON)
                         q_update.add(parent)
 
                     elif board.game_assume_drawn():
-                        child.assign_q(0, GameState.DRAW)
+                        child.assign_leaf_q(0, GameState.DRAW)
                         q_update.add(parent)
 
                     else:
                         new_leaves.append(child)
-                        child.set_p_features(self.feature_board.get_p_features())
-                        child.set_q_features(self.feature_board.get_q_features())
+                        child.set_matrix(board.get_matrix())
 
                     # unmove for child
                     board.unmove()
                 else:
-                    PExpMind_v2.accessed_transposition += 1
+                    PExpMind.accessed_transposition += 1
                     q_update.add(parent)
 
-    def q(self):
-        q_features = self.feature_board.get_q_features()
-        return self.value_est.predict([np.array([q_features])])[0][0]
+    def q(self, board):
+        return self.value_est.predict([np.array([board.get_matrix().reshape(self.size, self.size, -1)])])[0][0]
 
     def pick_random_move(self, board, possible_moves):
         picked_action = 0
@@ -451,15 +540,10 @@ class PExpMind_v2:
 
         return None
 
-
-
-
     # with epsilon probability will select random move
     # returns whether game has concluded or not
     def make_move(self, board, as_player, verbose=True, epsilon=0.1, save_root=False, consistency_check=False):
-
-        self.feature_board = FeatureBoard_v1_1(board)
-        current_q = self.q()
+        current_q = self.q(board)
         assert(as_player == board.get_player_to_move())
 
         # incomplete
@@ -476,10 +560,10 @@ class PExpMind_v2:
         picked_action = 0
 
         # pick a suboptimal move randomly
-        #if np.random.random_sample() < epsilon:
-        #    if verbose:
-        #        print('suboptimal move')
-        #    picked_action = self.pick_random_move(board, possible_moves)
+        if np.random.random_sample() < epsilon:
+            if verbose:
+                print('suboptimal move')
+            picked_action = self.pick_random_move(board, possible_moves)
 
         if len(possible_moves) == 0:
             print("Error in P Expand Search")
@@ -489,7 +573,19 @@ class PExpMind_v2:
         best_move, best_node = possible_moves[0]
         best_q = best_node.q
 
-        print(current_q, best_q)
+        # q update with learning rate self.alpha
+        #new_best_q = (1 - self.alpha) * current_q + self.alpha * best_q
+
+        # compress to model valid range
+        #new_best_q = max(min(new_best_q, PExpNode.MAX_MODEL_Q), PExpNode.MIN_MODEL_Q)
+
+        #print(current_q, best_q)
+        #self.add_train_example(board, new_best_q, best_move)
+
+        # picked move may not equal best move if we're making a suboptimal one
+        #board.move(*picked_move)
+
+        self.memory_root = root_node.children[picked_move[0], picked_move[1]]
 
         return best_move, current_q, best_q
 
@@ -498,7 +594,7 @@ class PExpMind_v2:
         import sys
         sys.setrecursionlimit(100000)
         saving_hash = str(hash(tuple(board.get_matrix().reshape(-1))))
-        with open('src/logs/' + saving_hash + '.pkl', 'wb') as f:
+        with open('qgomoku/logs/' + saving_hash + '.pkl', 'wb') as f:
             root_node.set_matrix(board.get_matrix())
             pickle.dump(root_node, f)
             print('Root saved at ', saving_hash)
@@ -513,6 +609,17 @@ class PExpMind_v2:
 
     def index_to_move(self, index):
         return np.int(index / self.size), np.int(index % self.size)
+
+    # adds rotations
+    def add_train_example(self, board, result, move):
+        board_vectors = board.get_rotated_matrices()
+
+        for i, vector in enumerate(board_vectors):
+            self.train_vectors.append(vector)
+            self.train_q.append(result)
+            # get the i'th rotation
+            which_rotation = board.get_rotated_point(self.move_to_index(move))[i]
+            self.train_p.append(self.one_hot_p(which_rotation))
 
 
     def save(self, filename):

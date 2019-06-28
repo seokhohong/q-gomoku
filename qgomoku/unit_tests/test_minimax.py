@@ -1,7 +1,7 @@
 
 
 import unittest
-from src.core.minimax import MoveList
+from qgomoku.core.minimax import MoveList
 
 class TestStringMethods(unittest.TestCase):
     def test_movelist_hash(self):
