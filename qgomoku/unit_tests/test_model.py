@@ -8,6 +8,9 @@ from qgomoku.core.minimax import MoveList
 
 import numpy as np
 
+import os
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 class TestMind(unittest.TestCase):
 

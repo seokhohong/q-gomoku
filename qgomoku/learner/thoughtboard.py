@@ -3,7 +3,7 @@ from qgomoku.learner.game_to_features import FeatureSet_v1_1, FeatureBoard_v1_1
 from qgomoku.core.board import Player
 import copy
 
-# the board that considers hypothetical moves all over the place
+# ThoughtBoard manages rapid move/unmove sequences and computes available moves and win conditions
 # feature_system_cls is the class that gets wrapped into making the features
 class ThoughtBoard:
     def __init__(self, board, feature_system_cls):
@@ -27,6 +27,7 @@ class ThoughtBoard:
             return -1
         return 0
 
+    # this call assumes that the game is in a concluding state after move_list
     def get_hard_q_after(self, move_list):
         return self._call_function_with_board_state(self.root_board.get_winning_player, move_list)
 
@@ -36,6 +37,7 @@ class ThoughtBoard:
     def game_over(self):
         return self.board.game_over()
 
+    # checks whether the game is over after move_list
     def game_over_after(self, move_list):
         return self._call_function_with_board_state(self.root_board.game_over, move_list)
 
@@ -57,6 +59,8 @@ class ThoughtBoard:
 
         return value
 
+    # puts the internal featureboard into a state as defined by move_list, computes win/loss conditions
+    # then runs function
     def _call_function_with_board_state(self, func, move_list):
         for move in move_list:
             self.root_board.blind_move(move)
@@ -79,18 +83,18 @@ class ThoughtBoard:
         return self.feature_system.get_q_features()
 
     # does not check if move_list is a valid set of moves
-    # works right now because p_features = q_features
     def get_q_features_after(self, move_list):
         return self._call_function_with_feature_state(self.root_feature_system.get_q_features, move_list)
 
     def get_p_features_after(self, move_list):
         return self._call_function_with_feature_state(self.root_feature_system.get_p_features, move_list)
 
+    # moves the board forward by move_list moves
     def make_moves(self, move_list):
         for move in move_list:
             self.make_move(move)
 
-    # returns a copy
+    # returns a defensive copy
     def available_moves(self):
         return set(self.board.get_available_moves())
 

@@ -15,26 +15,26 @@ def debug_replay():
 
 def debug_game():
     mind = PExpMind_v3(size=9, init=False, search_params=None)
-    mind.load_net('../../models/voldmaster_' + str(0))
+    #mind.load_net('../../models/voldmaster_' + str(0))
+    mind.load_net('../../models/v3_0')
 
     cache = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_win_checks=False)
     board = BitBoard(cache, size=9, win_chain_length=5)
 
-    moves = [70, 69, 10, 42, 43, 25, 50, 40, 49, 48, 32, 41, 39, 58, 38, 31, 51, 22, 13, 52, 21, 29, 67, 59, 56, 37, 61, 30, 28, 47, 12, 14, 11, 9, 33, 3, 23, 53, 27, 24, 6, 46, 57, 19, 55, 2, 44, 34, 4, 74, 7, 36, 5, 8, 54, 62, 16, 65, 66, 78, 75, 68, 1, 15, 76, 77, 26, 35, 45, 63, 18, 60, 79, 20, 0, 64, 80, 72, 73, 17]
+    moves = [51, 2, 72, 68, 71, 42, 40, 58, 41]
 
     for move in moves:
         board.move(move)
+        print(board)
 
     print(board)
     searcher = PEvenSearch(board, mind.policy_est, mind.value_est,
                            search_params={
-                               'max_iterations': 2,
-                               'min_child_p': -7,
+                               'max_iterations': 10,
+                               'min_child_p': -6,
                                'p_batch_size': 1 << 10,
-                               'q_fraction': 1
+                               'q_fraction': 3
                            })
-
-    searcher.run(num_iterations=2)
     searcher.run()
 
 

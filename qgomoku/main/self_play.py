@@ -105,9 +105,20 @@ def play_oldmaster():
     mind.load_net('../../models/voldmaster_' + str(0))
     return mind
 
+def make_v3(min_child_p=-7, size=9):
+    mind = PExpMind_v3(size=size, init=False, search_params={
+        'max_iterations': 10,
+        'min_child_p': min_child_p,
+        'p_batch_size': 1 << 10,
+        'num_pv_expand': 25,
+        'q_fraction': 1
+    })
+    mind.load_net('../../models/v3_0')
+    return mind
+
 def play():
     size = 9
-    player = play_oldmaster()
+    player = make_v3(min_child_p=-8)
     for i in range(100):
         match = Match(player, player, trivialize=False, verbose=True)
         result = match.play()

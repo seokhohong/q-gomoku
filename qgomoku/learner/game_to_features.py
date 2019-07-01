@@ -6,12 +6,14 @@ from qgomoku.core.game_record import GameRecord
 
 from qgomoku.util import utils
 
+# FeatureBoard classes serve to rapidly prepare feature sets after move and unmove sequences
+# Similar to ThoughtBoard, but does not calculate game wins/losses
 class FeatureBoard_v1_1:
     CHANNELS = 4
     def __init__(self, board):
         self._size = board.get_size()
         self._ops = []
-        self.tensor = np.zeros((self._size, self._size, FeatureBoard_v1_1.CHANNELS))
+        self.tensor = np.zeros((self._size, self._size, FeatureBoard_v1_1.CHANNELS), dtype=np.float32)
         self._player_to_move = board.get_player_to_move()
         self._transformer = BoardTransform(self._size)
         self._init_available_move_vector(board)
@@ -29,6 +31,7 @@ class FeatureBoard_v1_1:
             if board.is_move_available(i):
                 self._available_move_vector[i] = 1
 
+    # returns the available move vector at the board's initial state
     def get_init_available_move_vector(self):
         return np.copy(self._available_move_vector)
 
@@ -149,5 +152,5 @@ class FeatureSet_v1_1:
                 self.make_feature_tensors(board, move, q_assessments[i][0], q_assessments[i][1])
             # learn drawn positions
             elif record.get_winning_player() == Player.NONE:
-                self.make_feature_tensors(board, move, q_assessments[i][0], q_assessments[i][1], make_p=False)
+                self.make_feature_tensors(board, move, q_assessments[i][0], q_assessments[i][1])
             board.move(move)

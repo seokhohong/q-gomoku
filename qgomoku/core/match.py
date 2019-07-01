@@ -38,6 +38,7 @@ class Match:
 
             if self.board.game_over():
                 self.game_record.set_winner(self.board.get_winning_player())
+                print(self.game_record.get_winning_player())
                 break
 
             current_player = current_player.other()

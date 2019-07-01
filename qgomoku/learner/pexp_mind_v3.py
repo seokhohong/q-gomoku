@@ -24,7 +24,9 @@ class PEvenSearch:
                  fraction_q=0.2,
                  min_child_p=-6, # minimum local p threshold at which a child will be created
                  num_pv_expand=100,
-                 search_params=None,
+                 search_params={
+
+                 },
                  verbose=True,
                  validations=False):
         self.board = board
@@ -64,6 +66,7 @@ class PEvenSearch:
 
         self.history = {}
 
+    # define hyperparameters for searching
     def set_search_params(self, params):
         for k, v in params.items():
             self.__setattr__(k, v)
@@ -71,6 +74,7 @@ class PEvenSearch:
     def get_pv(self):
         return self.root_node.get_principal_variation()
 
+    # add nodes to expand
     def add_expand_nodes(self, nodes):
         self.expandable_nodes.update(nodes)
         if self._validations:
@@ -174,10 +178,12 @@ class PEvenSearch:
         if len(to_p_expand) == 0:
             return []
 
+        # the known list of top p nodes, after sorting, has a less likely P than the best leaf node, then update
+        # but this should not need to be called too often after the first few iterations
         if to_p_expand[0].p_comparator > self._top_all_p[-1].p_comparator or len(self._top_all_p) < self._num_pv_expand:
             combined_top_p = list(set(self._top_all_p).union(set(to_p_expand[:self._num_pv_expand])))
             self._top_all_p = sorted(combined_top_p, key=lambda x: x.p_comparator)
-            self._top_all_p = self._top_all_p[:max(len(self._top_all_p), 0)]
+            self._top_all_p = self._top_all_p[:min(len(self._top_all_p), self._num_pv_expand)]
 
         top_pvs = set()
         for node in self._top_all_p:
