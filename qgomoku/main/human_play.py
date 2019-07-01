@@ -3,6 +3,7 @@ from qgomoku.learner.pexp_mind_v3 import PExpMind_v3
 from qgomoku.core.board import Board, BitBoard, BitBoardCache, Player
 from qgomoku.core.minimax import PExpNode
 import numpy as np
+import keras
 
 import random
 
@@ -16,6 +17,8 @@ def play():
 
     SIZE = 9
 
+
+
     mind = PExpMind_v3(size=9, init=False, search_params={
         'max_iterations': 10,
         'min_child_p': -7,
@@ -23,7 +26,7 @@ def play():
         'num_pv_expand': 25,
         'q_fraction': 1
     })
-    mind.load_net('../../models/voldmaster_' + str(0))
+    mind.load_net('../../models/v3_' + str(0))
 
     cache = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_win_checks=False)
     board = BitBoard(cache, size=9, win_chain_length=5)

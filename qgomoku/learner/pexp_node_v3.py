@@ -43,6 +43,7 @@ class PExpNodeV3:
         # for debugging
         # key is move index (just an integer)
         self._children = {}
+
         self.children_with_q = []
         # current best child
         self.best_child = None

@@ -16,6 +16,12 @@ class FeatureBoard_v1_1:
         self._transformer = BoardTransform(self._size)
         self._init_available_move_vector(board)
         self._init(board)
+        self._init_last_move(board)
+
+    def _init_last_move(self, board):
+        last_move = board.get_last_move()
+        if last_move:
+            self._update_last_move(self._transformer.index_to_coordinate(last_move))
 
     def _init_available_move_vector(self, board):
         self._available_move_vector = np.zeros((self._size ** 2))

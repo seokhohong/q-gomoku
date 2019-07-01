@@ -254,6 +254,9 @@ class BitBoard:
                 moves.add(i)
         return moves
 
+    def get_last_move(self):
+        return utils.peek_stack(self._ops)
+
     # for testing purposes
     def set_to_one_move_from_win(self):
         self.move_coord(0, 0)
@@ -588,3 +591,20 @@ class Board:
     def __str__(self):
         return self.pprint()
 
+
+class TranspositionTable:
+    def __init__(self):
+        self._transposition_dict = {}
+        self._transposition_hits = 0
+
+    def get(self, key):
+        if key in self._transposition_dict:
+            self._transposition_hits += 1
+            return self._transposition_dict[key]
+        return None
+
+    def put(self, key, node):
+        self._transposition_dict[key] = node
+
+    def get_num_hits(self):
+        return self._transposition_hits

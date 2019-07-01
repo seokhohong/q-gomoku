@@ -2,8 +2,9 @@ import pickle
 
 import keras
 import numpy as np
-from qgomoku.core.board import BitBoard, GameState, BoardTransform, BitBoardCache, Player
+from qgomoku.core.board import BitBoard, GameState, BoardTransform, BitBoardCache, Player, TranspositionTable
 from qgomoku.learner.pexp_node_v3 import PExpNodeV3
+from qgomoku.learner.thoughtboard import ThoughtBoard
 from qgomoku.core import minimax
 from keras import losses
 from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalization
@@ -12,118 +13,6 @@ from sortedcontainers import SortedList
 import copy
 
 from qgomoku.learner.game_to_features import FeatureSet_v1_1, FeatureBoard_v1_1
-
-class TranspositionTable:
-    def __init__(self):
-        self._transposition_dict = {}
-        self._transposition_hits = 0
-
-    def get(self, key):
-        if key in self._transposition_dict:
-            self._transposition_hits += 1
-            return self._transposition_dict[key]
-        return None
-
-    def put(self, key, node):
-        self._transposition_dict[key] = node
-
-    def get_num_hits(self):
-        return self._transposition_hits
-
-# the board that considers hypothetical moves all over the place
-class ThoughtBoard:
-    def __init__(self, board):
-        self.board = board
-        self.feature_system = FeatureBoard_v1_1(board)
-        # root is used for queries that have a movelist (class functions stateless-ly)
-        self.root_board = copy.deepcopy(board)
-        self.root_feature_system = FeatureBoard_v1_1(board)
-        self.delta = 0
-
-    def make_move(self, move):
-        self.board.move(move)
-        self.feature_system.move(move)
-        self.delta += 1
-
-    def get_hard_q(self):
-        winning_player = self.board.get_winning_player()
-        if winning_player == Player.FIRST:
-            return 1
-        elif winning_player == Player.SECOND:
-            return -1
-        return 0
-
-    def get_hard_q_after(self, move_list):
-        return self._call_function_with_board_state(self.root_board.get_winning_player, move_list)
-
-    def get_game_status(self):
-        return self.board.game_status()
-
-    def game_over(self):
-        return self.board.game_over()
-
-    def game_over_after(self, move_list):
-        return self._call_function_with_board_state(self.root_board.game_over, move_list)
-
-    def get_available_move_vector_after(self, move_list):
-        move_vector = self.root_feature_system.get_init_available_move_vector()
-        for move in move_list:
-            move_vector[move] = 0
-        return move_vector
-
-    # puts the internal featureboard into a state as defined by move_list, then operates this function
-    def _call_function_with_feature_state(self, func, move_list):
-        for move in move_list:
-            self.root_feature_system.move(move)
-
-        value = func()
-
-        for i in range(len(move_list)):
-            self.root_feature_system.unmove()
-
-        return value
-
-    def _call_function_with_board_state(self, func, move_list):
-        for move in move_list:
-            self.root_board.blind_move(move)
-
-        self.root_board.compute_game_state()
-        value = func()
-
-        for i in range(len(move_list)):
-            self.root_board.unmove()
-
-        return value
-
-    def unmove(self):
-        self.board.unmove()
-        self.feature_system.unmove()
-        self.delta -= 1
-        assert self.delta >= 0
-
-    def get_q_features(self):
-        return self.feature_system.get_q_features()
-
-    # does not check if move_list is a valid set of moves
-    # works right now because p_features = q_features
-    def get_q_features_after(self, move_list):
-        return self._call_function_with_feature_state(self.root_feature_system.get_q_features, move_list)
-
-    def get_p_features_after(self, move_list):
-        return self._call_function_with_feature_state(self.root_feature_system.get_p_features, move_list)
-
-    def make_moves(self, move_list):
-        for move in move_list:
-            self.make_move(move)
-
-    # returns a copy
-    def available_moves(self):
-        return set(self.board.get_available_moves())
-
-    # not sure if faster to undo or copy
-    def reset(self):
-        for i in range(self.delta):
-            self.unmove()
 
 class PEvenSearch:
     def __init__(self,
@@ -158,7 +47,7 @@ class PEvenSearch:
 
         self.root_node = PExpNodeV3(parent=None, move=None, is_maximizing=self.is_maximizing)
 
-        self.thought_board = ThoughtBoard(board)
+        self.thought_board = ThoughtBoard(board, FeatureBoard_v1_1)
 
         self.transformer = BoardTransform(board.get_size())
 
@@ -253,7 +142,8 @@ class PEvenSearch:
             p_features.append(self.thought_board.get_p_features_after(node.get_move_chain()))
 
         # returns (len(parents), size**2) matrix
-        log_p_predictions = np.log(self.policy_est.predict([p_features], batch_size=len(p_features)))
+        predictions = self.policy_est.predict([p_features], batch_size=len(p_features))
+        log_p_predictions = np.log(np.clip(predictions, a_min=keras.backend.epsilon(), a_max=1.))
 
         # create and assign
         for prediction_set, parent in zip(log_p_predictions, parents):

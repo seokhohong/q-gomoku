@@ -17,7 +17,7 @@ class TestMind(unittest.TestCase):
     def test_thoughtboard_consistency(self):
         board = Board(size=9, win_chain_length=5)
         fb = FeatureBoard_v1_1(board)
-        tb = ThoughtBoard(board)
+        tb = ThoughtBoard(board, FeatureBoard_v1_1)
 
         fb.move(15)
 
@@ -42,7 +42,7 @@ class TestMind(unittest.TestCase):
     def test_move_available_vector(self):
         board = Board(size=9, win_chain_length=5)
         fb = FeatureBoard_v1_1(board)
-        tb = ThoughtBoard(board)
+        tb = ThoughtBoard(board, FeatureBoard_v1_1)
         self.assertEqual(np.sum(tb.get_available_move_vector_after([34, 45])), 79)
 
         fb.move(15)
@@ -53,7 +53,7 @@ class TestMind(unittest.TestCase):
     def test_thoughtboard_root_win(self):
         trivial_board = Board(size=9, win_chain_length=5)
         trivial_board.set_to_one_move_from_win()
-        tb = ThoughtBoard(trivial_board)
+        tb = ThoughtBoard(trivial_board, FeatureBoard_v1_1)
 
         trivial_board.move(36)
         print(trivial_board.pprint())
