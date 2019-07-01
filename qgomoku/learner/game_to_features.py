@@ -114,7 +114,7 @@ class FeatureSet_v1_1:
 
         rot = BoardTransform(size=board.get_size())
         tensor_rotations = rot.get_rotated_matrices(feature_tensor)
-        to_move_rotations = rot.get_rotated_points(rot.coordinate_to_index(*next_move))
+        to_move_rotations = rot.get_rotated_points(next_move)
 
         for i in range(len(tensor_rotations)):
             if make_q:
