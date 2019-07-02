@@ -58,8 +58,9 @@ class DisplayForm:
     def open_pv(self, node):
         best_child = node.best_child
         self.open_nodes.add(best_child)
-        if best_child != self and best_child and  best_child.best_child:
+        if best_child != self and best_child and best_child.best_child:
             self.open_pv(best_child)
+
 
 def reconstruction(matrix):
     from ..core.board import Board
@@ -78,7 +79,10 @@ def reconstruction(matrix):
             instructions += 'board.move(' + str(ys[i][0]) + ", " + str(ys[i][1]) + ")" + '\n'
     return instructions
 
+
 SIZE = 9
+
+
 def print_board(matrix):
     board_string = ""
     for i in range(0, SIZE):
@@ -94,6 +98,7 @@ def print_board(matrix):
         board_string += "|"
     return board_string
 
+
 node_num = -4442216286206565317
 with open(str(node_num) + '.pkl', 'rb') as f:
     root_node = pickle.load(f)
@@ -101,7 +106,7 @@ with open(str(node_num) + '.pkl', 'rb') as f:
 df = DisplayForm(root_node)
 print(print_board(root_node.get_matrix()))
 print(df)
-#print(reconstruction(root_node.get_matrix()))
+# print(reconstruction(root_node.get_matrix()))
 while True:
     inp = input("_:")
     if inp.startswith('open'):

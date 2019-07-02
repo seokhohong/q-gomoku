@@ -1,16 +1,14 @@
-from sortedcontainers import SortedSet
-import random
-import cProfile
 from queue import PriorityQueue
+
 
 def mass_init():
     for i in range(100000):
         d = PriorityQueue()
-        #SortedSet(key=lambda x: x.move_goodness)
+        # SortedSet(key=lambda x: x.move_goodness)
 
 
 if __name__ == "__main__":
-    #run()
+    # run()
 
     import cProfile, pstats
     from io import StringIO

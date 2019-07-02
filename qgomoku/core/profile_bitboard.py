@@ -1,16 +1,19 @@
+import cProfile
+import pstats
+from io import StringIO
+
 from qgomoku.core.board import *
 from qgomoku.util.bitops import *
 
-import cProfile, pstats
-from io import StringIO
 
 def build():
     bitboard = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_magics=True,
                              force_build_win_checks=True)
 
+
 def play_games():
     cache = BitBoardCache("../cache/9-magics", size=9, win_chain_length=5, force_build_magics=True,
-                             force_build_win_checks=True)
+                          force_build_win_checks=True)
     for i in range(100):
         bitboard = BitBoard(cache, size=9, win_chain_length=5, draw_point=50)
         board = Board(size=9, win_chain_length=5, draw_point=50)
@@ -28,6 +31,7 @@ def play_games():
 
             if board.game_over() != bitboard.game_over():
                 bitboard.move(random_move)
+
 
 def profile():
     pr = cProfile.Profile()

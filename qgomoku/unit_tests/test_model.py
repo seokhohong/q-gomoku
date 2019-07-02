@@ -1,21 +1,18 @@
-
+import os
 import unittest
-from qgomoku.learner.pexp_mind_v3 import PExpMind_v3, PEvenSearch, ThoughtBoard
-from qgomoku.learner.pexp_node_v3 import PExpNodeV3
-from qgomoku.core.board import Board, BoardTransform, GameState, BitBoard, BitBoardCache
-from qgomoku.learner.game_to_features import FeatureBoard_v1_1
-from qgomoku.core.minimax import MoveList
 
 import numpy as np
 
-import os
+from qgomoku.core.board import BitBoard, BitBoardCache
+from qgomoku.learner.game_to_features import FeatureBoard_v1_1
+from qgomoku.learner.pexp_mind_v3 import PExpMind_v3
 
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 
 class TestMind(unittest.TestCase):
 
     def test_pnet(self):
-
         mind = PExpMind_v3(size=9, init=False, search_params=None)
         mind.load_net('../../models/v3_' + str(0))
 
@@ -33,11 +30,9 @@ class TestMind(unittest.TestCase):
         mind.make_move(board)
         predictions = mind.policy_est.predict([np.array([fboard.get_q_features()])])[0]
         self.assertEqual(np.argmax(predictions), 49)
-        print(sorted(enumerate(predictions), key=lambda x : x[1], reverse=True))
+        print(sorted(enumerate(predictions), key=lambda x: x[1], reverse=True))
 
 
 if __name__ == '__main__':
     unittest.main()
     # TestMind().test_longer_loss()
-
-

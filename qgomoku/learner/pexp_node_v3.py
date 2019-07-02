@@ -2,7 +2,7 @@ import numpy as np
 
 from qgomoku.core.board import GameState, BoardTransform
 from qgomoku.core.minimax import MoveList
-import functools
+
 
 # search tree where we search strictly according to the likelihood function
 class PExpNodeV3:
@@ -139,7 +139,7 @@ class PExpNodeV3:
     def integrity_check(self):
         for child in self._children.values():
             for parent in child._parents:
-                if child.is_assigned_q() and child not in parent.children_with_q\
+                if child.is_assigned_q() and child not in parent.children_with_q \
                         or not child.is_assigned_q() and child in parent.children_with_q:
                     print('why')
                 assert child.is_assigned_q() and child in parent.children_with_q
@@ -267,7 +267,8 @@ class PExpNodeV3:
             coord_moves = '(ROOT)'
         if self._principal_variation:
             # super bad code
-            return ("PV: " + coord_moves + " Q: {0:.4f} P: {1:.4f}").format(self.get_q(), self._principal_variation.log_total_p)
+            return ("PV: " + coord_moves + " Q: {0:.4f} P: {1:.4f}").format(self.get_q(),
+                                                                            self._principal_variation.log_total_p)
         elif self.log_total_p:
             return "Position: " + coord_moves + " P: {0:.4f}".format(self.log_total_p)
         else:

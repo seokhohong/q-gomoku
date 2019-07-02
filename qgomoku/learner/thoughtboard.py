@@ -1,7 +1,7 @@
-
-from qgomoku.learner.game_to_features import FeatureSet_v1_1, FeatureBoard_v1_1
-from qgomoku.core.board import Player
 import copy
+
+from qgomoku.core.board import Player
+
 
 # ThoughtBoard manages rapid move/unmove sequences and computes available moves and win conditions
 # feature_system_cls is the class that gets wrapped into making the features

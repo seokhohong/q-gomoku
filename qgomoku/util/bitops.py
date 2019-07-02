@@ -1,17 +1,21 @@
-from time import time
 import random
+from time import time
+from typing import List
+
 import numpy as np
-import math
-from typing import List, Dict, Tuple, Sequence
+
 
 def set_bit(value, bit):
     return value | (1 << bit)
 
+
 def clear_bit(value, bit):
     return value & ~(1 << bit)
 
+
 def get_bit(value, bit):
     return (value & (1 << bit)) > 0
+
 
 def array_of_set_bits(value):
     set_bits = []
@@ -19,6 +23,7 @@ def array_of_set_bits(value):
         if get_bit(value, i):
             set_bits.append(i)
     return set_bits
+
 
 def has_consecutive_bits(value, num_consecutive):
     mask = (1 << num_consecutive) - 1
@@ -36,6 +41,7 @@ def num_1s(value):
             num_set += 1
     return num_set
 
+
 def msb(n):
     if n == 0:
         return 0
@@ -45,11 +51,13 @@ def msb(n):
         msb += 1
     return msb
 
+
 def bitstring_with(bits_to_set: List[int]):
     bitstring = 0
     for location in bits_to_set:
         bitstring = set_bit(bitstring, int(location))
     return bitstring
+
 
 def random_bits(length, num_approx_set):
     bitstring = 0
@@ -57,8 +65,10 @@ def random_bits(length, num_approx_set):
         bitstring = set_bit(bitstring, i)
     return bitstring
 
-def use_magic(bitstring, magic, shift, force_overflow = (1 << 81) - 1):
+
+def use_magic(bitstring, magic, shift, force_overflow=(1 << 81) - 1):
     return ((bitstring * magic) & force_overflow) >> shift
+
 
 def validate_magic(magic, shift, positions, length=81):
     unique = set()
@@ -73,6 +83,7 @@ def validate_magic(magic, shift, positions, length=81):
         unique.add(magic_result)
     return len(unique) == 1 << len(positions)
 
+
 def bitstrings_that_produce(magic, shift, value, positions, length=81):
     results = []
     for i in range(1 << len(positions)):
@@ -84,6 +95,7 @@ def bitstrings_that_produce(magic, shift, value, positions, length=81):
         if magic_result == value:
             results.append(bitstring)
     return results
+
 
 # @deprecated
 def create_magic(bit_positions, length):
@@ -100,7 +112,7 @@ def create_magic(bit_positions, length):
         shift = (length - num_set)
         if ((mask * magic) & force_overflow) >> shift != (1 << num_set) - 1:
             continue
-        #if passed % 1000 == 0:
+        # if passed % 1000 == 0:
         #    print(passed)
         # check for collisions
         used = np.zeros((1 << num_set))
@@ -118,6 +130,7 @@ def create_magic(bit_positions, length):
                 assert validate_magic(magic, shift, bit_positions)
                 return magic, shift
 
+
 def run_python_bitting():
     start = time()
 
@@ -128,10 +141,12 @@ def run_python_bitting():
 
     print(time() - start)
 
+
 def check_overflow():
     a = random.randint(1 << 50, 1 << 55)
     b = random.randint(1 << 50, 1 << 55)
     numpy_int = np.array([a]) * np.array([b])
+
 
 if __name__ == "__main__":
     assert has_consecutive_bits(15, 4)

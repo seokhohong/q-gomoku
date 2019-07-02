@@ -1,12 +1,8 @@
-
 import unittest
-from qgomoku.learner.pexp_mind_v3 import PExpMind_v3, PEvenSearch, ThoughtBoard
-from qgomoku.learner.pexp_node_v3 import PExpNodeV3
-from qgomoku.core.board import Board, BoardTransform, GameState
-from qgomoku.learner.game_to_features import FeatureBoard_v1_1
-from qgomoku.core.minimax import MoveList
 
-import numpy as np
+from qgomoku.core.board import GameState
+from qgomoku.core.minimax import MoveList
+from qgomoku.learner.pexp_node_v3 import PExpNodeV3
 
 
 class TestMind(unittest.TestCase):
@@ -25,7 +21,6 @@ class TestMind(unittest.TestCase):
         base_2.append(40)
 
         self.assertEqual(base.transposition_hash(), base_2.transposition_hash())
-
 
     def test_shorter_win(self):
         base = PExpNodeV3(parent=None, move=15)
@@ -171,5 +166,3 @@ class TestMind(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main()
     # TestMind().test_longer_loss()
-
-

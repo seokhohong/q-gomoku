@@ -2,6 +2,7 @@ import numpy as np
 
 from qgomoku.core.board import GameState
 
+
 class MoveList:
     # moves should be a tuple
     def __init__(self, moves, position_hash):
@@ -13,7 +14,7 @@ class MoveList:
         new_hash_elem = (-1) ** (len(self.moves) % 2) * new_move
         new_list_hash = list(self.list_hash)
         new_list_hash.append(new_hash_elem)
-        return MoveList((self.moves + (new_move, )), sorted(new_list_hash))
+        return MoveList((self.moves + (new_move,)), sorted(new_list_hash))
 
     def __eq__(self, other):
         return self.moves == other.moves
@@ -30,6 +31,7 @@ class MoveList:
 
     def transposition_hash(self):
         return tuple(self.list_hash)
+
 
 # search tree where we search strictly according to the likelihood function
 class PExpNode:
@@ -111,8 +113,8 @@ class PExpNode:
                 self.children_with_q.append(child)
         else:
             child = PExpNode(parent=self,
-                            is_maximizing=not self.is_maximizing,
-                            full_move_list=new_move_list)
+                             is_maximizing=not self.is_maximizing,
+                             full_move_list=new_move_list)
             transposition_table[transposition_hash] = child
 
         self.children[move] = child
@@ -132,9 +134,9 @@ class PExpNode:
 
         # for a leaf node, the principal variation is itself
         self.q = q
-        assert(PExpNode.MIN_Q <= q <= PExpNode.MAX_Q)
+        assert (PExpNode.MIN_Q <= q <= PExpNode.MAX_Q)
         self.principal_variation = self
-        assert(not self.assigned_q)
+        assert (not self.assigned_q)
         self.assigned_q = True
 
         for parent in self.parents:
@@ -156,11 +158,11 @@ class PExpNode:
     def ab_valid(self):
         if len(self.parents) > 0 and self.parents[0].q:
             return self.parents[0].is_maximizing and self.parents[0].q < PExpNode.MAX_Q \
-                    or not self.parents[0].is_maximizing and self.parents[0].q > PExpNode.MIN_Q
+                   or not self.parents[0].is_maximizing and self.parents[0].q > PExpNode.MIN_Q
         return True
 
     def assign_p(self, log_p):
-        assert(not self.p_assigned)
+        assert (not self.p_assigned)
         self.log_total_p = self.parents[0].log_total_p + log_p
         self.p_assigned = True
         # Ideally
@@ -225,7 +227,7 @@ class PExpNode:
             if child.has_children():
                 leaves.extend(child.recursive_children())
             else:
-                if not include_game_end and child.game_status == GameState.NOT_OVER\
+                if not include_game_end and child.game_status == GameState.NOT_OVER \
                         or include_game_end:
                     leaves.append(child)
         return leaves
@@ -234,7 +236,7 @@ class PExpNode:
     def consistent_pv(self):
         if self.has_children():
             valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNode.UNASSIGNED_Q]
-            assert(len(valid_children) == len(self.children_with_q))
+            assert (len(valid_children) == len(self.children_with_q))
             if len(valid_children) == 0:
                 return
 
@@ -243,7 +245,7 @@ class PExpNode:
             else:
                 best_move = min(valid_children, key=lambda x: x[1].move_goodness)[0]
 
-            assert(self.children[best_move].q - self.best_child.q < 1E-6)
+            assert (self.children[best_move].q - self.best_child.q < 1E-6)
 
             if self.assigned_q:
                 if abs(self.q - self.children[best_move].q) > 1E-6:
@@ -252,13 +254,13 @@ class PExpNode:
                     print(self.children[best_move])
                     self.principal_variation.recalculate_q()
                     self.children[best_move].principal_variation.recalculate_q()
-                assert(abs(self.q - self.children[best_move].q) < 1E-6)
-            assert(abs(self.principal_variation.q - self.children[best_move].principal_variation.q) < 1E-6)
+                assert (abs(self.q - self.children[best_move].q) < 1E-6)
+            assert (abs(self.principal_variation.q - self.children[best_move].principal_variation.q) < 1E-6)
 
             # using negamax framework
-            #if self.principal_variation != self.children[best_move].principal_variation:
+            # if self.principal_variation != self.children[best_move].principal_variation:
             #    self.whole_set_q()
-            assert(self.principal_variation.log_total_p < 0)
+            assert (self.principal_variation.log_total_p < 0)
 
             for child in self.children.values():
                 child.consistent_pv()
@@ -289,7 +291,7 @@ class PExpNode:
             value = -np.inf
             for move, child in valid_children:
                 child_value, next_child = child.negamax()
-                assert(abs(child_value - next_child.principal_variation.q) < 1E-4)
+                assert (abs(child_value - next_child.principal_variation.q) < 1E-4)
                 if child_value > value:
                     best_child = next_child
                     value = child_value
@@ -313,7 +315,6 @@ class PExpNode:
         best_move, best_child = max(valid_children, key=lambda x: sign * x[1].move_goodness)
         return [str(best_move)] + best_child.real_principal_variation()
 
-
     @classmethod
     # whether the q is from a game result (as opposed to an approximation of game state)
     def is_result_q(cls, q, epsilon=1E-7):
@@ -321,6 +322,7 @@ class PExpNode:
 
     def __str__(self):
         if self.principal_variation:
-            return ("PV: " + ', '.join(self.real_principal_variation()) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.principal_variation.log_total_p)
+            return ("PV: " + ', '.join(self.real_principal_variation()) + " Q: {0:.4f} P: {1:.4f}").format(self.q,
+                                                                                                           self.principal_variation.log_total_p)
         else:
             return "Position: " + str(self.full_move_list.moves) + " P: {0:.4f}".format(self.log_total_p)

@@ -2,6 +2,7 @@ import numpy as np
 
 from qgomoku.core.board import GameState
 
+
 # search tree where we search strictly according to the likelihood function
 class PExpNodeV2:
     MAX_Q = 1.0
@@ -113,7 +114,7 @@ class PExpNodeV2:
         # for a leaf node, the principal variation is itself
         assert not self.is_assigned_q()
         self.q = q
-        assert(PExpNodeV2.MIN_Q <= q <= PExpNodeV2.MAX_Q)
+        assert (PExpNodeV2.MIN_Q <= q <= PExpNodeV2.MAX_Q)
         self.principal_variation = self
 
         for parent in self.parents:
@@ -139,7 +140,7 @@ class PExpNodeV2:
         return True
 
     def assign_p(self, log_p):
-        assert(not self.p_assigned)
+        assert (not self.p_assigned)
         self.log_total_p = self.parents[0].log_total_p + log_p
         self.p_assigned = True
         # Ideally
@@ -206,7 +207,7 @@ class PExpNodeV2:
             if child.has_children():
                 leaves.extend(child.recursive_children())
             else:
-                if not include_game_end and child.game_status == GameState.NOT_OVER\
+                if not include_game_end and child.game_status == GameState.NOT_OVER \
                         or include_game_end:
                     leaves.append(child)
         return leaves
@@ -215,7 +216,7 @@ class PExpNodeV2:
     def consistent_pv(self):
         if self.has_children():
             valid_children = [tup for tup in self.children.items() if tup[1].q is not PExpNodeV2.UNASSIGNED_Q]
-            assert(len(valid_children) == len(self.children_with_q))
+            assert (len(valid_children) == len(self.children_with_q))
             if len(valid_children) == 0:
                 return
 
@@ -224,7 +225,7 @@ class PExpNodeV2:
             else:
                 best_move = min(valid_children, key=lambda x: x[1].move_goodness)[0]
 
-            assert(self.children[best_move].q - self.best_child.q < 1E-6)
+            assert (self.children[best_move].q - self.best_child.q < 1E-6)
 
             if self.is_assigned_q():
                 if abs(self.q - self.children[best_move].q) > 1E-6:
@@ -233,13 +234,13 @@ class PExpNodeV2:
                     print(self.children[best_move])
                     self.principal_variation.recalculate_q()
                     self.children[best_move].principal_variation.recalculate_q()
-                assert(abs(self.q - self.children[best_move].q) < 1E-6)
-            assert(abs(self.principal_variation.q - self.children[best_move].principal_variation.q) < 1E-6)
+                assert (abs(self.q - self.children[best_move].q) < 1E-6)
+            assert (abs(self.principal_variation.q - self.children[best_move].principal_variation.q) < 1E-6)
 
             # using negamax framework
-            #if self.principal_variation != self.children[best_move].principal_variation:
+            # if self.principal_variation != self.children[best_move].principal_variation:
             #    self.whole_set_q()
-            assert(self.principal_variation.log_total_p < 0)
+            assert (self.principal_variation.log_total_p < 0)
 
             for child in self.children.values():
                 child.consistent_pv()
@@ -270,7 +271,7 @@ class PExpNodeV2:
             value = -np.inf
             for move, child in valid_children:
                 child_value, next_child = child.negamax()
-                assert(abs(child_value - next_child.principal_variation.q) < 1E-4)
+                assert (abs(child_value - next_child.principal_variation.q) < 1E-4)
                 if child_value > value:
                     best_child = next_child
                     value = child_value
@@ -294,7 +295,6 @@ class PExpNodeV2:
         best_move, best_child = max(valid_children, key=lambda x: sign * x[1].move_goodness)
         return [str(best_move)] + best_child.real_principal_variation()
 
-
     @classmethod
     # whether the q is from a game result (as opposed to an approximation of game state)
     def is_result_q(cls, q, epsilon=1E-7):
@@ -302,6 +302,7 @@ class PExpNodeV2:
 
     def __str__(self):
         if self.principal_variation:
-            return ("PV: " + ', '.join(self.real_principal_variation()) + " Q: {0:.4f} P: {1:.4f}").format(self.q, self.principal_variation.log_total_p)
+            return ("PV: " + ', '.join(self.real_principal_variation()) + " Q: {0:.4f} P: {1:.4f}").format(self.q,
+                                                                                                           self.principal_variation.log_total_p)
         else:
             return "Position: " + str(self.full_move_list.moves) + " P: {0:.4f}".format(self.log_total_p)

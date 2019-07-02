@@ -1,13 +1,13 @@
-from qgomoku.learner import pexp_mind
-from qgomoku.core.board import Board
-
-from numpy.random import RandomState
 import numpy as np
+from numpy.random import RandomState
 
+from qgomoku.core.board import Board
+from qgomoku.learner import pexp_mind
 
 minds = []
 
 SIZE = 9
+
 
 def run():
     mind = pexp_mind.PExpMind(size=SIZE, init=False, channels=4)
@@ -23,16 +23,16 @@ def run():
         # randomize the board a bit
         for j in range(rs.randint(0, 10)):
             board.make_random_move()
-        #board.move(2, 2)
-        #board.move(0, 1)
-        #board.move(2, 3)
-        #board.move(2, 1)
-        #board.move(2, 4)
-        #board.move(3, 1)
-        #board.move(4, 3)
-        #board.move(3, 4)
-        #board.move(6, 6)
-        #board.move(4, 1)
+        # board.move(2, 2)
+        # board.move(0, 1)
+        # board.move(2, 3)
+        # board.move(2, 1)
+        # board.move(2, 4)
+        # board.move(3, 1)
+        # board.move(4, 3)
+        # board.move(3, 4)
+        # board.move(6, 6)
+        # board.move(4, 1)
 
         # board.move(0, 0)
         # board.move(1, 0)
@@ -105,8 +105,10 @@ def run():
                 break
 
         print('done')
+
+
 if __name__ == "__main__":
-    #run()
+    # run()
 
     import cProfile, pstats
     from io import StringIO

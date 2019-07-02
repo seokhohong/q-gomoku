@@ -1,8 +1,5 @@
-import os
- 
-from setuptools import setup, find_packages 
- 
- 
+from setuptools import setup
+
 setup(
     name="gomoku2",
     python_requires=">3",

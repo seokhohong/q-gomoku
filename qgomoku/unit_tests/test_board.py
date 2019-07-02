@@ -1,9 +1,10 @@
+import json
+import unittest
+
+import numpy as np
 
 from qgomoku.core.board import Board, BoardTransform, Player
 
-import json
-import unittest
-import numpy as np
 
 class TestStringMethods(unittest.TestCase):
     def test_chain_length(self):
@@ -51,7 +52,6 @@ class TestStringMethods(unittest.TestCase):
         board.move_coord(0, 0)
         self.assertTrue(board.game_won())
 
-
     def test_export_parse(self):
         board = Board(size=9, win_chain_length=5)
         for i in range(10):
@@ -72,7 +72,7 @@ class TestStringMethods(unittest.TestCase):
 
         for i in range(9 * 9):
             x, y = rot.index_to_coordinate(i)
-            #print(x, y, i)
+            # print(x, y, i)
             self.assertEqual(i, rot.coordinate_to_index(x, y))
 
         board = Board(size=9, win_chain_length=5)
@@ -107,5 +107,3 @@ class TestStringMethods(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
-

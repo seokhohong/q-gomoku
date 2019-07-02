@@ -1,11 +1,10 @@
-from collections import defaultdict
-
-import numpy as np
-import random
-from enum import Enum
-
 import os
 import pickle
+import random
+from collections import defaultdict
+from enum import Enum
+
+import numpy as np
 
 from qgomoku.util import utils, bitops
 
@@ -15,8 +14,10 @@ class GameState(Enum):
     DRAW = 2
     NOT_OVER = 3
 
+
 class BoardTransform:
     NUM_ROTATIONS = 8
+
     def __init__(self, size):
         self._size = size
         self._cached_point_rotations = defaultdict(list)
@@ -60,6 +61,7 @@ class BoardTransform:
     def in_bounds(self, x, y):
         return 0 <= x < self._size and 0 <= y < self._size
 
+
 # Board class represents the state of the game
 
 # board perception will always be from the perspective of Player 1
@@ -69,16 +71,19 @@ class Player(Enum):
     NONE = 0
     FIRST = 1
     SECOND = 2
+
     def other(self):
         if self == Player.SECOND:
             return Player.FIRST
         elif self == Player.FIRST:
             return Player.SECOND
         return Player.NONE
+
     def flip(self, times):
         if times % 2 == 0:
             return self
         return self.other()
+
     @staticmethod
     def get(value):
         for player in Player:
@@ -89,6 +94,7 @@ class Player(Enum):
 
 class BitBoardCache:
     DELTA_SETS = [((-1, -1), (1, 1)), ((0, -1), (0, 1)), ((-1, 0), (1, 0)), ((1, -1), (-1, 1))]
+
     def __init__(self, filename, size=9, win_chain_length=5,
                  verbose=False, force_build_magics=False, force_build_win_checks=False):
         self._size = size
@@ -98,7 +104,7 @@ class BitBoardCache:
         self._verbose = verbose
         loaded = self._load()
 
-        #if force_build_magics or not loaded:
+        # if force_build_magics or not loaded:
         #    self._build_magics()
         if force_build_win_checks or not loaded:
             self._build_win_checks()
@@ -152,7 +158,6 @@ class BitBoardCache:
                         win_check = bitops.bitstring_with(marked_location_set_bits)
                         self._win_checks[move][deltaset_index].add(win_check)
 
-
     def check_win(self, bitstring, played_move):
         masks = self._delta_masks[played_move]
         win_checks = self._win_checks[played_move]
@@ -166,11 +171,11 @@ class BitBoardCache:
             return True
         return False
 
-
     def _save(self):
         if os.path.exists(os.path.dirname(self._filename)):
             with open(self._filename, 'wb') as f:
                 pickle.dump((self._delta_masks, self._win_checks), f)
+
 
 # High performance board relying on bit manipulation to track game status
 class BitBoard:
@@ -283,9 +288,9 @@ class BitBoard:
                 flatmatrix[x, y] = self.get_spot(index).value
 
         return {'size': str(self._size),
-                   'win_chain_length': str(self._win_chain_length),
-                    'boardstring': ''.join([str(elem) for elem in flatmatrix.astype(np.int32).reshape(-1)]),
-                    'player_to_move': str(self.get_player_to_move().value)}
+                'win_chain_length': str(self._win_chain_length),
+                'boardstring': ''.join([str(elem) for elem in flatmatrix.astype(np.int32).reshape(-1)]),
+                'player_to_move': str(self.get_player_to_move().value)}
 
     # takes a board string and recreates a game state from it (quite slow)
     @classmethod
@@ -334,6 +339,7 @@ class BitBoard:
 
     def __str__(self):
         return self.pprint()
+
 
 class Board:
     # channels
@@ -452,10 +458,13 @@ class Board:
     def compute_game_state(self):
         last_move = utils.peek_stack(self._ops)
         if last_move is not None:
-            if self.chain_length(last_move, -1, 0) + self.chain_length(last_move, 1, 0) >= self._win_chain_length + 1\
-                    or self.chain_length(last_move, -1, 1) + self.chain_length(last_move, 1, -1) >= self._win_chain_length + 1\
-                    or self.chain_length(last_move, 1, 1) + self.chain_length(last_move, -1, -1) >= self._win_chain_length + 1\
-                    or self.chain_length(last_move, 0, 1) + self.chain_length(last_move, 0, -1) >= self._win_chain_length + 1:
+            if self.chain_length(last_move, -1, 0) + self.chain_length(last_move, 1, 0) >= self._win_chain_length + 1 \
+                    or self.chain_length(last_move, -1, 1) + self.chain_length(last_move, 1,
+                                                                               -1) >= self._win_chain_length + 1 \
+                    or self.chain_length(last_move, 1, 1) + self.chain_length(last_move, -1,
+                                                                              -1) >= self._win_chain_length + 1 \
+                    or self.chain_length(last_move, 0, 1) + self.chain_length(last_move, 0,
+                                                                              -1) >= self._win_chain_length + 1:
                 self._game_state = GameState.WON
                 return
             if len(self._ops) == self._size ** 2:
@@ -521,9 +530,9 @@ class Board:
                 flatmatrix[x, y] = self._matrix[index]
 
         return {'size': str(self._size),
-                   'win_chain_length': str(self._win_chain_length),
-                    'boardstring': ''.join([str(elem) for elem in flatmatrix.astype(np.int32).reshape(-1)]),
-                    'player_to_move': str(self._player_to_move.value)}
+                'win_chain_length': str(self._win_chain_length),
+                'boardstring': ''.join([str(elem) for elem in flatmatrix.astype(np.int32).reshape(-1)]),
+                'player_to_move': str(self._player_to_move.value)}
 
     # takes a board string and recreates a game state from it (quite slow)
     @classmethod

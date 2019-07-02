@@ -1,7 +1,8 @@
-
 import numpy as np
-from qgomoku.core.board import Board, Player, BitBoard, BitBoardCache
+
+from qgomoku.core.board import Player, BitBoard, BitBoardCache
 from qgomoku.core.game_record import GameRecord
+
 
 # a match between two ai's
 class Match:
@@ -18,6 +19,10 @@ class Match:
                 self.board.make_random_move()
         else:
             self.board.set_to_one_move_from_win()
+
+        # close to draw state
+        # for move in [49, 40, 50, 29, 51, 52, 47, 48, 41, 31, 32, 23, 39, 68, 42, 58, 38, 33, 65, 56, 57, 73, 67, 37, 64, 66, 43, 59, 21, 22, 13, 25, 24, 44, 30, 16, 3, 12, 2, 1, 5, 6, 14, 17, 35, 7, 71, 28, 19, 34, 60, 78, 77, 62, 46, 54, 55, 36, 20, 45, 63, 18, 27, 53, 15, 9, 0, 69, 10, 75, 74, 8, 79, 72, 80]:
+        #    self.board.move(move)
 
         self.players = {Player.FIRST: mind1, Player.SECOND: mind2}
         self.game_record = GameRecord.create(self.board)

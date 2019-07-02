@@ -1,23 +1,15 @@
-
-from qgomoku.learner.pexp_mind_v3 import PExpMind_v3
-from qgomoku.core.board import Board, BitBoard, BitBoardCache, Player
-from qgomoku.core.minimax import PExpNode
-import numpy as np
-import keras
-
+import os
 import random
 
-import os
+from qgomoku.core.board import BitBoard, BitBoardCache, Player
+from qgomoku.learner.pexp_mind_v3 import PExpMind_v3
 
 # bug with python on macos
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 
 
 def play():
-
     SIZE = 9
-
-
 
     mind = PExpMind_v3(size=9, init=False, search_params={
         'max_iterations': 10,
@@ -34,7 +26,7 @@ def play():
     # randomize the board a bit
     for j in range(random.randint(0, int(SIZE * 2))):
         board.make_random_move()
-    #board.move_coord(4, 4)
+    # board.move_coord(4, 4)
 
     print(board.pprint())
 
@@ -68,7 +60,7 @@ def play():
             print(" ")
             print(move, 'Q:', best_q)
 
-            #if best_q > PExpNode.MAX_MODEL_Q :
+            # if best_q > PExpNode.MAX_MODEL_Q :
             #    print('Computer Resigns!')
             #    break
 

@@ -1,20 +1,21 @@
+import os
+
+import numpy as np
+import tensorflow as tf
 
 from qgomoku.core.match import Match
 from qgomoku.learner import pexp_mind
 from qgomoku.learner.pexp_mind_v2 import PExpMind_v2
 from qgomoku.learner.pexp_mind_v3 import PExpMind_v3
-import numpy as np
 
-import tensorflow as tf
-
-import os
 # bug with python on macos
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 
 def init_pexp_mind(size):
-
     mind = pexp_mind.PExpMind(size=size, init=False, channels=4)
-    #mind.load_net('../../trained_models/9_4_4')
+
+    # mind.load_net('../../trained_models/9_4_4')
 
     def expanding_p(depth, p):
         return np.logical_or.reduce([
@@ -37,8 +38,8 @@ def init_pexp_mind(size):
 
     return mind
 
-def init_new_mind(size):
 
+def init_new_mind(size):
     mind = pexp_mind_v2.PExpMind_v2(size=size, init=True)
 
     def expanding_p(depth, p):
@@ -95,15 +96,17 @@ def play_step(size=9, step=3):
 
     return mind
 
+
 def play_oldmaster():
     mind = PExpMind_v3(size=9, init=False, search_params={
-                       'max_iterations': 3,
-                       'min_child_p': -7,
-                       'p_batch_size': 1 << 10,
-                       'q_fraction': 1
+        'max_iterations': 3,
+        'min_child_p': -7,
+        'p_batch_size': 1 << 10,
+        'q_fraction': 1
     })
     mind.load_net('../../models/voldmaster_' + str(0))
     return mind
+
 
 def make_v3(min_child_p=-7, size=9):
     mind = PExpMind_v3(size=size, init=False, search_params={
@@ -113,8 +116,9 @@ def make_v3(min_child_p=-7, size=9):
         'num_pv_expand': 25,
         'q_fraction': 1
     })
-    mind.load_net('../../models/v3_0')
+    mind.load_net('../../models/v3_0_1')
     return mind
+
 
 def play():
     size = 9
@@ -123,6 +127,7 @@ def play():
         match = Match(player, player, trivialize=False, verbose=True)
         result = match.play()
         print(result)
+
 
 if __name__ == "__main__":
     play()

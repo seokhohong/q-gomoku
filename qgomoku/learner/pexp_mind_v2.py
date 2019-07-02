@@ -2,15 +2,16 @@ import pickle
 
 import keras
 import numpy as np
-from qgomoku.core.board import Board, GameState
-from qgomoku.learner.pexp_node_v2 import PExpNodeV2
-from qgomoku.core import minimax
 from keras import losses
 from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalization
 from keras.models import Model  # basic class for specifying and training a neural network
 from sortedcontainers import SortedList
 
+from qgomoku.core import minimax
+from qgomoku.core.board import Board, GameState
 from qgomoku.learner.game_to_features import FeatureSet_v1_1, FeatureBoard_v1_1
+from qgomoku.learner.pexp_node_v2 import PExpNodeV2
+
 
 class PExpMind_v2:
     def __init__(self, size, init=True):
@@ -73,7 +74,6 @@ class PExpMind_v2:
 
         return model
 
-
     def policy_model_9(self):
         inp = Input(shape=(self.size, self.size, self.channels))
 
@@ -106,7 +106,6 @@ class PExpMind_v2:
 
         return model
 
-
     def pvs_k_principal_variations(self, leaf_nodes):
         # include the best move according to q
         principal_variations = []
@@ -126,23 +125,21 @@ class PExpMind_v2:
 
         def init(self):
             self.root_node = PExpNodeV2(parent=None,
-                                      is_maximizing=self.is_maximizing,
-                                      full_move_list=minimax.MoveList(moves=(), position_hash=[]))
+                                        is_maximizing=self.is_maximizing,
+                                        full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
             # transposition hash, Node
             self.transposition_table = {}
 
-
         def run(self):
             self.init()
-
 
     def p_search(self, board, is_maximizing, root_node=None, save_root=True, consistency_check=False, verbose=True):
 
         if root_node is None:
             root_node = PExpNodeV2(parent=None,
-                                    is_maximizing=is_maximizing,
-                                    full_move_list=minimax.MoveList(moves=(), position_hash=[]))
+                                   is_maximizing=is_maximizing,
+                                   full_move_list=minimax.MoveList(moves=(), position_hash=[]))
 
         principal_variations = [root_node]
 
@@ -167,15 +164,15 @@ class PExpMind_v2:
             if i > self.max_iters:
                 break
                 # break if there's some hanging issue
-                #if i > self.max_iters * 5:
+                # if i > self.max_iters * 5:
                 #    break
 
                 # same child has been best child for awhile now
-                #if len(set(best_children[-self._move_convergence_count:])) == 1\
+                # if len(set(best_children[-self._move_convergence_count:])) == 1\
                 #        and len(root_node.principal_variation.full_move_list) > self.required_depth:
                 #    break
 
-                #if root_node.principal_variation.game_status == GameState.DRAW:
+                # if root_node.principal_variation.game_status == GameState.DRAW:
                 #    break
 
             # searching doesn't get us anywhere for awhile
@@ -183,13 +180,14 @@ class PExpMind_v2:
                 best_children.append(root_node.best_child)
                 principal_qs.append(root_node.principal_variation.q)
                 # had the same best q for MAXED_DURATION iterations
-                if len(principal_qs) > MAXED_DURATION and np.abs(np.mean(principal_qs[-MAXED_DURATION : -1])) == 1:
+                if len(principal_qs) > MAXED_DURATION and np.abs(np.mean(principal_qs[-MAXED_DURATION: -1])) == 1:
                     if verbose:
                         print('Maxed Duration')
                     break
 
             # p expansion
-            self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed, verbose=verbose)
+            self.p_expand(board, principal_variations, leaf_nodes, transposition_table, previously_removed,
+                          verbose=verbose)
 
             principal_variations = self.pvs_k_principal_variations(leaf_nodes)
 
@@ -198,28 +196,30 @@ class PExpMind_v2:
                 break
 
             # P will already have been expanded so do a Q eval
-            #self.q_eval_top_leaves(leaf_nodes, min_eval_q=k ** 2, max_eval_q=k ** 2)
+            # self.q_eval_top_leaves(leaf_nodes, min_eval_q=k ** 2, max_eval_q=k ** 2)
             self.q_eval(leaf_nodes)
 
             # this is used in case the p expansion doesn't capture the nodes we need to hit (if q_exp_batch_size is large enough this isn't needed)
-            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.p_exp_batch_size * 2, num_leaves=self.q_exp_batch_size)
-            print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations), len(set(next_pvs + principal_variations)))
+            next_pvs = self.highest_leaf_qs(leaf_nodes, is_maximizing, max_p_eval=self.p_exp_batch_size * 2,
+                                            num_leaves=self.q_exp_batch_size)
+            print('Difference between P Expand and Q expand', len(next_pvs) + len(principal_variations),
+                  len(set(next_pvs + principal_variations)))
 
-            #principal_variations.extend(next_pvs)
+            # principal_variations.extend(next_pvs)
 
             if consistency_check:
                 root_node.consistent_pv()
 
             # this check doesn't hold if we do PV Q extensions
-            #if root_node.principal_variation:
+            # if root_node.principal_variation:
             #    root_node.top_down_q()
             #    assert(abs(root_node.principal_variation.q - root_node.negamax()[0]) < 1E-4)
 
             # if we have a PV, add it to expand
             if root_node.principal_variation and root_node.principal_variation.game_status == GameState.NOT_OVER:
                 # pv could point to a 'stable' node that doesn't expand
-                #assert(root_node.principal_variation not in previously_removed)
-                assert(not root_node.principal_variation.has_children())
+                # assert(root_node.principal_variation not in previously_removed)
+                assert (not root_node.principal_variation.has_children())
                 principal_variations.append(root_node.principal_variation)
 
             # remove duplicates
@@ -241,10 +241,10 @@ class PExpMind_v2:
 
         return possible_moves, root_node
 
-
     def highest_leaf_qs(self, leaf_nodes, is_maximizing, max_p_eval=100, num_leaves=10):
         num_eval = min(max_p_eval, len(leaf_nodes))
-        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if leaf.is_assigned_q() and leaf.game_status == GameState.NOT_OVER]
+        valid_leaves = [leaf for leaf in leaf_nodes.islice(0, num_eval) if
+                        leaf.is_assigned_q() and leaf.game_status == GameState.NOT_OVER]
         best_leaves = sorted(valid_leaves, key=lambda x: abs(x.q), reverse=True)
         return best_leaves[:num_leaves]
 
@@ -254,11 +254,10 @@ class PExpMind_v2:
         nodes = [node for node in nodes if not node.is_assigned_q()]
         for leaf in nodes:
             # normally not, but it can be if nodes = PV's children
-            assert(leaf.game_status == GameState.NOT_OVER)
-            assert(not leaf.has_children())
+            assert (leaf.game_status == GameState.NOT_OVER)
+            assert (not leaf.has_children())
             parents_to_update.update(leaf.parents)
             board_matrices.append(leaf.get_q_features())
-
 
         # if nothing to eval, get out
         if len(board_matrices) == 0:
@@ -266,10 +265,10 @@ class PExpMind_v2:
 
         # attach q predictions to all leaves and compute q tree at once
         q_predictions = np.clip(
-                    self.value_est.predict(np.array(board_matrices), batch_size=1000).reshape(len(board_matrices)),
-                    a_max=PExpNodeV2.MAX_MODEL_Q,
-                    a_min=PExpNodeV2.MIN_MODEL_Q
-            )
+            self.value_est.predict(np.array(board_matrices), batch_size=1000).reshape(len(board_matrices)),
+            a_max=PExpNodeV2.MAX_MODEL_Q,
+            a_min=PExpNodeV2.MIN_MODEL_Q
+        )
 
         for i, leaf in enumerate(nodes):
             # it's possible to have transposition assign q's even if we filtered above
@@ -320,6 +319,7 @@ class PExpMind_v2:
         self.alpha = alpha
         self.required_depth = required_depth
         self.max_iters = max_iters
+
     # Expand all nodes_to_expand, updating leaf_nodes in place
     # Also passes
     def p_expand(self, board, nodes_to_expand, leaf_nodes, transposition_table, previously_removed, verbose=True):
@@ -327,9 +327,9 @@ class PExpMind_v2:
             if parent in previously_removed:
                 continue
             # parent could be a 'stable' node
-            #assert(parent not in previously_removed)
+            # assert(parent not in previously_removed)
             # should NOT be expanding any non-leaf node
-            assert(parent in leaf_nodes)
+            assert (parent in leaf_nodes)
             try:
                 leaf_nodes.remove(parent)
             except ValueError:
@@ -340,12 +340,15 @@ class PExpMind_v2:
         p_search_vectors = self.get_board_vectors(board, nodes_to_expand)
         p_search_nodes = list(nodes_to_expand)
 
-        p_board_vectors = np.array(p_search_vectors).reshape((len(p_search_vectors), self.size, self.size, self.channels))
+        p_board_vectors = np.array(p_search_vectors).reshape(
+            (len(p_search_vectors), self.size, self.size, self.channels))
 
-        log_p_predictions = np.log(self.policy_est.predict([p_board_vectors], batch_size=len(p_board_vectors))).reshape(-1)
+        log_p_predictions = np.log(self.policy_est.predict([p_board_vectors], batch_size=len(p_board_vectors))).reshape(
+            -1)
 
         parent_index = np.hstack([np.full(shape=(self.size ** 2), fill_value=i) for i in range(len(nodes_to_expand))])
-        parent_depth = np.hstack([np.full(shape=(self.size ** 2), fill_value=len(i.full_move_list.moves)) for i in nodes_to_expand])
+        parent_depth = np.hstack(
+            [np.full(shape=(self.size ** 2), fill_value=len(i.full_move_list.moves)) for i in nodes_to_expand])
         move_index = np.array([list(range(self.size ** 2)) * len(nodes_to_expand)])
         zipped_predictions = np.vstack([parent_index, parent_depth, move_index, log_p_predictions]).transpose()
 
@@ -359,7 +362,8 @@ class PExpMind_v2:
         q_update = set()
 
         # numpy array of unique parent indices, start and end indices of each parent's move lists, and the count of the number of moves per parent
-        unique_parents, move_indices, parent_counts = np.unique(filtered_predictions[:, 0], return_counts=True, return_index=True)
+        unique_parents, move_indices, parent_counts = np.unique(filtered_predictions[:, 0], return_counts=True,
+                                                                return_index=True)
 
         # i is the parent meta index, index of parent index
         for i, parent_index in enumerate(unique_parents):
@@ -371,7 +375,8 @@ class PExpMind_v2:
                 board.blind_move(*move)
 
             max_move_indices = move_indices[i + 1] if i < len(unique_parents) - 1 else filtered_predictions.shape[0]
-            sorted_moves = sorted(filtered_predictions[move_indices[i]:max_move_indices, 2:4], key=lambda x: x[1], reverse=True)
+            sorted_moves = sorted(filtered_predictions[move_indices[i]:max_move_indices, 2:4], key=lambda x: x[1],
+                                  reverse=True)
             num_moves = min(len(sorted_moves), self._max_expansion(parent.depth()))
 
             self.create_children(board, parent, sorted_moves[:num_moves], new_leaves, q_update, transposition_table)
@@ -446,16 +451,13 @@ class PExpMind_v2:
                 starting_root = self.memory_root
             for child in self.memory_root.children.values():
                 if np.alltrue(np.equal(child.get_matrix(), board.get_matrix())):
-                    #print('Found Previous Child')
+                    # print('Found Previous Child')
                     starting_root = child
                     break
-        #root_node.parents = []
-        #root_node.cleanse_memory(moves)
+        # root_node.parents = []
+        # root_node.cleanse_memory(moves)
 
         return None
-
-
-
 
     # with epsilon probability will select random move
     # returns whether game has concluded or not
@@ -463,7 +465,7 @@ class PExpMind_v2:
 
         self.feature_board = FeatureBoard_v1_1(board)
         current_q = self.q()
-        assert(as_player == board.get_player_to_move())
+        assert (as_player == board.get_player_to_move())
 
         # incomplete
         starting_root = self.cleanse_memory_tree(self.memory_root, None, None)
@@ -479,7 +481,7 @@ class PExpMind_v2:
         picked_action = 0
 
         # pick a suboptimal move randomly
-        #if np.random.random_sample() < epsilon:
+        # if np.random.random_sample() < epsilon:
         #    if verbose:
         #        print('suboptimal move')
         #    picked_action = self.pick_random_move(board, possible_moves)
@@ -517,7 +519,6 @@ class PExpMind_v2:
     def index_to_move(self, index):
         return Move(0, np.int(index / self.size), np.int(index % self.size))
 
-
     def save(self, filename):
         self.value_est.save(filename + '_value.net')
         self.policy_est.save(filename + '_policy.net')
@@ -525,7 +526,7 @@ class PExpMind_v2:
     def load_net(self, filename):
         self.value_est = keras.models.load_model(filename + '_value.net')
         self.policy_est = keras.models.load_model(filename + '_policy.net')
-       
+
     def load(self, value_file, policy_file):
         self.value_est = keras.models.load_model(value_file)
         self.policy_est = keras.models.load_model(policy_file)

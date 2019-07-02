@@ -2,17 +2,15 @@ import pickle
 
 import keras
 import numpy as np
-from qgomoku.core.board import BitBoard, GameState, BoardTransform, BitBoardCache, Player, TranspositionTable
-from qgomoku.learner.pexp_node_v3 import PExpNodeV3
-from qgomoku.learner.thoughtboard import ThoughtBoard
-from qgomoku.core import minimax
 from keras import losses
 from keras.layers import Input, Convolution2D, Dense, Flatten, BatchNormalization
 from keras.models import Model  # basic class for specifying and training a neural network
-from sortedcontainers import SortedList
-import copy
 
+from qgomoku.core.board import GameState, BoardTransform, Player, TranspositionTable
 from qgomoku.learner.game_to_features import FeatureSet_v1_1, FeatureBoard_v1_1
+from qgomoku.learner.pexp_node_v3 import PExpNodeV3
+from qgomoku.learner.thoughtboard import ThoughtBoard
+
 
 class PEvenSearch:
     def __init__(self,
@@ -22,7 +20,7 @@ class PEvenSearch:
                  max_iterations=10,
                  p_batch_size=2 ** 13,
                  fraction_q=0.2,
-                 min_child_p=-6, # minimum local p threshold at which a child will be created
+                 min_child_p=-6,  # minimum local p threshold at which a child will be created
                  num_pv_expand=100,
                  search_params={
 
@@ -57,8 +55,8 @@ class PEvenSearch:
         self.transposition_table = TranspositionTable()
 
         # all nodes at the leaves of the search tree
-        #self.expandable_nodes = SortedList([self.root_node], key=lambda x: x.p_comparator)
-        #self.expandable_set = set([self.root_node])
+        # self.expandable_nodes = SortedList([self.root_node], key=lambda x: x.p_comparator)
+        # self.expandable_set = set([self.root_node])
         self.expandable_nodes = {self.root_node}
         # we'll always be expanding the top k principal variations
         self._num_pv_expand = num_pv_expand
@@ -152,7 +150,8 @@ class PEvenSearch:
         # create and assign
         for prediction_set, parent in zip(log_p_predictions, parents):
             child_creation_vector = np.logical_and(prediction_set > self.min_child_p,
-                                                   self.thought_board.get_available_move_vector_after(parent.get_move_chain()))
+                                                   self.thought_board.get_available_move_vector_after(
+                                                       parent.get_move_chain()))
             self.thought_board.make_moves(parent.get_move_chain())
             for move in child_creation_vector.nonzero()[0]:
                 child = self.create_child(parent, int(move))
@@ -245,13 +244,13 @@ class PEvenSearch:
         self.thought_board.reset()
         q_features = [self.thought_board.get_q_features()]
         root_q = np.clip(self.value_est.predict(np.array(q_features), batch_size=len(q_features)).reshape(-1),
-                            a_min=PExpNodeV3.MIN_MODEL_Q, a_max=PExpNodeV3.MAX_MODEL_Q)[0]
+                         a_min=PExpNodeV3.MIN_MODEL_Q, a_max=PExpNodeV3.MAX_MODEL_Q)[0]
 
         self.root_node.self_q = root_q
 
     def highest_p(self, k):
         return sorted(list(self.expandable_nodes), key=lambda x: x.p_comparator)[:k]
-        #return [leaf for leaf in self.expandable_nodes.islice(0, k)]
+        # return [leaf for leaf in self.expandable_nodes.islice(0, k)]
 
     def q_eval(self):
 
@@ -284,8 +283,9 @@ class PEvenSearch:
         self.p_expand()
 
         if self._verbose:
-            print('Num Leaf Nodes', len(self.expandable_nodes), 'Transposition', self.transposition_table.get_num_hits())
-        #self.validate_whole_tree()
+            print('Num Leaf Nodes', len(self.expandable_nodes), 'Transposition',
+                  self.transposition_table.get_num_hits())
+        # self.validate_whole_tree()
 
         self.q_eval()
 
@@ -339,8 +339,9 @@ class PExpMind_v3:
         self.channels = FeatureSet_v1_1.CHANNELS
 
         assert size == 9
-        self.value_est = self.value_model_9()
-        self.policy_est = self.policy_model_9()
+        if init:
+            self.value_est = self.value_model_9()
+            self.policy_est = self.policy_model_9()
 
         # search parameters
         self.verbose = verbose
@@ -384,7 +385,6 @@ class PExpMind_v3:
         model.compile(loss=losses.mean_squared_error, optimizer='adam', metrics=['mean_squared_error'])
 
         return model
-
 
     def policy_model_9(self):
         inp = Input(shape=(self.size, self.size, self.channels))
@@ -433,7 +433,6 @@ class PExpMind_v3:
         self.required_depth = required_depth
         self.max_iters = max_iters
 
-
     def pick_random_move(self, board, possible_moves):
         picked_action = 0
 
@@ -453,9 +452,9 @@ class PExpMind_v3:
 
     def make_search(self, board):
         return PEvenSearch(board, self.policy_est, self.value_est,
-                               verbose=self.verbose, validations=self.validation,
-                                search_params=self.search_params,
-                                num_pv_expand=1000)
+                           verbose=self.verbose, validations=self.validation,
+                           search_params=self.search_params,
+                           num_pv_expand=1000)
 
     def make_move(self, board, searcher=None):
         if searcher is None:
@@ -475,7 +474,6 @@ class PExpMind_v3:
             pickle.dump(root_node, f)
             print('Root saved at ', saving_hash)
 
-
     def save(self, filename):
         self.value_est.save(filename + '_value.net')
         self.policy_est.save(filename + '_policy.net')
@@ -483,7 +481,7 @@ class PExpMind_v3:
     def load_net(self, filename):
         self.value_est = keras.models.load_model(filename + '_value.net')
         self.policy_est = keras.models.load_model(filename + '_policy.net')
-       
+
     def load(self, value_file, policy_file):
         self.value_est = keras.models.load_model(value_file)
         self.policy_est = keras.models.load_model(policy_file)

@@ -1,7 +1,7 @@
-
-
 import unittest
+
 from qgomoku.core.minimax import MoveList
+
 
 class TestStringMethods(unittest.TestCase):
     def test_movelist_hash(self):
@@ -16,6 +16,5 @@ class TestStringMethods(unittest.TestCase):
 
 if __name__ == '__main__' and __package__ is None:
     from os import sys, path
+
     sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
-
-

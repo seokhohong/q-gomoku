@@ -1,15 +1,15 @@
-
 import numpy as np
 
 from qgomoku.core.board import Board, BoardTransform, Player
 from qgomoku.core.game_record import GameRecord
-
 from qgomoku.util import utils
+
 
 # FeatureBoard classes serve to rapidly prepare feature sets after move and unmove sequences
 # Similar to ThoughtBoard, but does not calculate game wins/losses
 class FeatureBoard_v1_1:
     CHANNELS = 4
+
     def __init__(self, board):
         self._size = board.get_size()
         self._ops = []
@@ -108,6 +108,7 @@ class FeatureBoard_v1_1:
 
 class FeatureSet_v1_1:
     CHANNELS = 4
+
     def __init__(self, record_string, learning_rate=0.2):
         self.q_features = []
         self.q_labels = []

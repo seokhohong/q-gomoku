@@ -1,16 +1,17 @@
-
+import os
 import unittest
-from qgomoku.learner.pexp_mind_v3 import PExpMind_v3, PEvenSearch, ThoughtBoard
-from qgomoku.learner.pexp_node_v3 import PExpNodeV3
-from qgomoku.core.board import Board, BoardTransform, GameState, BitBoardCache, BitBoard
-from qgomoku.learner.game_to_features import FeatureBoard_v1_1
-from qgomoku.core.minimax import MoveList
 
 import numpy as np
 
-import os
+from qgomoku.core.board import Board, BitBoardCache, BitBoard
+from qgomoku.core.minimax import MoveList
+from qgomoku.learner.game_to_features import FeatureBoard_v1_1
+from qgomoku.learner.pexp_mind_v3 import PExpMind_v3, PEvenSearch, ThoughtBoard
+from qgomoku.learner.pexp_node_v3 import PExpNodeV3
+
 # bug with python on macos
-os.environ['KMP_DUPLICATE_LIB_OK']='True'
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+
 
 class TestMind(unittest.TestCase):
 
@@ -68,7 +69,7 @@ class TestMind(unittest.TestCase):
         board = Board(size=9, win_chain_length=5)
 
         searcher = PEvenSearch(board, mind.policy_est, mind.value_est, max_iterations=2,
-                    p_batch_size=1024, verbose=True, validations=True)
+                               p_batch_size=1024, verbose=True, validations=True)
 
         searcher.p_expand()
         self.assertGreater(len(searcher.expandable_nodes), 0)
@@ -97,13 +98,13 @@ class TestMind(unittest.TestCase):
         board.move_coord(4, 1)
 
         searcher = PEvenSearch(board, mind.policy_est, mind.value_est, max_iterations=4,
-                    p_batch_size=1024, verbose=True, validations=True)
+                               p_batch_size=1024, verbose=True, validations=True)
 
         searcher.run(4)
         pv = searcher.get_pv()
         self.assertEqual(len(pv.get_move_chain()), 1)
         self.assertEqual(pv.get_q(), PExpNodeV3.MAX_Q)
-        #self.assertEqual(pv.full_move)
+        # self.assertEqual(pv.full_move)
 
     def test_search(self):
         mind = PExpMind_v3(size=9, init=False, verbose=True, search_params={
